@@ -2,6 +2,8 @@
 
 Slotmap is an associative container with weak reference keys written in C++17. It is especially useful for writing video games.
 
+A [demo](demo/slotmap.cpp) is provided in `demo/slotmap.cpp`.
+
 Features:
 + Slots are stored linear in memory.
 + Constant time allocation and deallocation.
@@ -18,7 +20,7 @@ Slotmap requires the Boost header-only libraries `integer` and `iterator`. In ad
 All library files reside in `include/slotmap`.  
 All classes reside in the nested namespace `Twig::Container` 
 ## Configuration
-`Slotmap` is a class template which requires three template paramers:  
+`Slotmap` is a class template which requires three template parameters:  
 `T`, the type to store in the slotmap.  
 `Vector<U>`, a template template parameter which specifies which underlying vector container the slotmap uses. An example is `template<class T> using Vector = std::vector<T>`. A possible alternative is to use `folly::fbvector`.  
 `IdBits`, designates the size of the id in bits. A slotmap id type consists of a public `index` member field and a public `generation` member field. After every allocation, a global generation counter is incremented and assigned to the id of the allocated slot.
@@ -39,7 +41,8 @@ Throws a `OutOfSlots` exception if all slots are used and `Grow` is false.
 Throws when `Grow` is true and reallocation fails. 
 
 `Id push(U&& value)`:  
-Convenience method to allocate a free slot and assign or move-assign `value`
+Convenience method to allocate a free slot and assign or move-assign `value`.  
+Returns the id associated with the allocated slot.
 
 `bool free(T& value)`:  
 Free the slot taken by `value`. Note that the destructor of the element is *not* called, and should not be called manually. Returns true if the slot was used and the element is removed, or false if the slot was already free.

@@ -36,7 +36,7 @@ Construct a slotmap with a capacity of `capacity`. The allocator is passed to th
 
 ### Allocation / deallocation
 `T& alloc()`:  
-Return a reference to a free slot.  
+Return a reference to a free slot. An effort is made to keep the slotmap compact by recycling slots which have been used.     
 Throws a `OutOfSlots` exception if all slots are used and `Grow` is false.  
 Throws when `Grow` is true and reallocation fails. 
 

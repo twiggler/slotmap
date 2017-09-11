@@ -154,11 +154,16 @@ namespace slotmaptest {
 			Assert::IsFalse(didRemove);
 			assertAreEqual(slotmap, oracle);
 
+			auto idGermany = insert(slotmap, oracle, "Germany");
+			Assert::AreEqual(decltype(idGermany.index)(1), idGermany.index);
+			assertAreEqual(slotmap, oracle);
+
 			didRemove = remove(slotmap, oracle, last);
 			Assert::IsTrue(didRemove);
 			assertAreEqual(slotmap, oracle);
 
-			insert(slotmap, oracle, "Summer");
+			auto idSummer = insert(slotmap, oracle, "Summer");
+			Assert::AreEqual(decltype(idSummer.index)(2), idSummer.index);
 			assertAreEqual(slotmap, oracle);
 		}
 

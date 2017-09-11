@@ -11,10 +11,10 @@ using namespace Twig::Container;
 
 template<class T> using VectorAdapter = vector<T>;
 
-using TSlotmap = Slotmap<string, VectorAdapter, 32>; // Use 32-bit ids
+using TSlotmap = Slotmap<string, VectorAdapter>;
 
 int main() {
-	TSlotmap slotmap(10); // create a slotmap with 10 slots
+	auto slotmap = TSlotmap(10); // create a slotmap with 10 slots
 
 	auto& first = slotmap.alloc();
 	first = "Roel ";
@@ -23,10 +23,10 @@ int main() {
 	auto id = slotmap.push("de ");
 	slotmap.push("Jong");
 
-	auto element = slotmap.find(id); // lookup the slot with the first "de "
+	auto element = slotmap.find(id); // lookup the slot containing the first "de "
 	auto removedByElement = slotmap.free(*element);
 	
-	auto removedById = slotmap.free(id); // convenience, can also remove directly by id
+	auto removedById = slotmap.free(id); // conveniently try to remove directly by id
 	
 	assert(removedByElement && !removedById);
 

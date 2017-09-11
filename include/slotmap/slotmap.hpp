@@ -10,7 +10,7 @@ using detail::OutOfSlots;
 
 template<class T,
          template<class> class Vector,
-         unsigned IdBits,
+         unsigned IdBits = sizeof(unsigned) * CHAR_BIT ,
          unsigned GenerationBits = IdBits / 2,
          bool Grow = false>
 class Slotmap {

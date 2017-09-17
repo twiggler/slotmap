@@ -1,6 +1,6 @@
 # Introduction
 
-Slotmap is an associative container with weak reference keys written in C++17. It is especially useful for writing video games.
+Slotmap is a sequence container with weak reference keys written in C++17. It is especially useful for writing video games.
 
 A [demo](demo/slotmap.cpp) is provided in `demo/slotmap.cpp`.
 

@@ -24,6 +24,15 @@
     <ClInclude Include="include\slotmap\detail\slotmap.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="include\slotmap\detail\nullskipfield.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\slotmap\detail\skipfield.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\slotmap\detail\skipiterator.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

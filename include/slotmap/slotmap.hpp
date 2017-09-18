@@ -1,6 +1,8 @@
 #pragma once
 
 #include "detail/slotmap.hpp"
+#include "detail/nullskipfield.hpp" 
+#include "detail/skipfield.hpp"
 #include <random>
 #include <cassert>
 
@@ -8,13 +10,21 @@ namespace Twig::Container {
 
 using detail::OutOfSlots;
 
+struct SlotmapFlags {
+	static constexpr auto GROW = 1u;
+	static constexpr auto SKIPFIELD = 1u << 1;
+};
+
 template<class T,
          template<class> class Vector,
          unsigned IdBits = sizeof(unsigned) * CHAR_BIT ,
          unsigned GenerationBits = IdBits / 2,
-         bool Grow = false>
+         unsigned Flags = 0>
 class Slotmap {
 public:
+	static constexpr auto Resizable = bool(Flags & SlotmapFlags::GROW);
+	static constexpr auto FastIterable = bool(Flags & SlotmapFlags::SKIPFIELD);
+
 	using Value = T;
 	using TVector = Vector<detail::Item<T, IdBits, GenerationBits>>;
 	using Allocator = typename TVector::allocator_type;
@@ -26,15 +36,20 @@ public:
 		_randomEngine(std::random_device{}()),
 		_capacity(std::min(capacity, Id::limits().index)),
         _vector(_capacity, alloc),
-		_top(0) // prevent call to clear from needless zapping of elements
+		_top(0),
+		_freeHead(Id::limits().index),
+		_size(0),
+		_skipfield(decltype(_skipfield)::create(_capacity + 1))
     {
-        clear();
+		std::uniform_int_distribution<unsigned long long> _generationDistribution(1, Id::limits().generation);
+		_generation = static_cast<typename Id::UInt>(_generationDistribution(_randomEngine)); // uniform_int_distribution does not support unsigned char
     }
 
     void clear() {
 		for (typename Id::UInt elementIndex = 0; elementIndex < _top; elementIndex++)
 			_vector[elementIndex].id.generation = 0;
 
+		_skipfield.clear();
 		_size = 0;
 		 std::uniform_int_distribution<unsigned long long> _generationDistribution(1, Id::limits().generation);
         _generation = static_cast<typename Id::UInt>(_generationDistribution(_randomEngine)); // uniform_int_distribution does not support unsigned char
@@ -75,10 +90,11 @@ public:
 		if (_freeHead < _top) {
 			index = _freeHead;
 			_freeHead = _vector[index].id.index;
+			_skipfield.unskip(index);
 		}
 		else {
 			if (_size == _capacity) {
-				if (Grow && _capacity != Id::limits().index) {
+				if (Resizable && _capacity != Id::limits().index) {
 					_vector.resize(_size + 1);
 					_capacity = static_cast<decltype(_capacity)>(std::min(_vector.capacity(), std::size_t(Id::limits().index)));
 				}
@@ -87,6 +103,7 @@ public:
 			}
 
 			index = _top++;
+			_skipfield.grow();
 		}
 	
 		auto& element = _vector[index];
@@ -113,6 +130,7 @@ public:
         auto oldFreeHead = _freeHead;    // Cannot use std::swap because it is illegal to form a reference to a bit field.
         _freeHead = markedItem.id.index;
         markedItem.id = { oldFreeHead, 0 };
+		_skipfield.skip(&markedItem - _vector.data());
         _size--;
 		
 		return true;
@@ -145,8 +163,11 @@ public:
     }
 
 private:
-	template<class TSlotmap> friend class Filtered;
+	template<class, bool> friend class Filtered;
+
 	using UInt = typename Id::UInt;
+	using SkipfieldArray = Vector<UInt>;
+	using TSkipfield = std::conditional_t<FastIterable, detail::Skipfield<SkipfieldArray>, detail::NullSkipfield<UInt>>;
 
 	UInt _capacity;
 	TVector _vector;
@@ -155,6 +176,7 @@ private:
     UInt _top;
     UInt _freeHead;
     UInt _size;
+	TSkipfield _skipfield;
 };
 
 }

@@ -29,14 +29,15 @@ public:
 					_data[index] = 1;
 					break;
 				}
-			case 1: // Block to the left, index is a tail node.
+			case 1: // Block to the left; index is a tail node.
 				{
-					const auto blockSize = _data[index - 1] + 1;
-					_data[index] = blockSize;
-					_data[index - blockSize] = blockSize;
+					const auto blockStartOffset = _data[index - 1];
+					const auto newBlockSize = blockStartOffset + 1;
+					_data[index] = newBlockSize;
+					_data[index - blockStartOffset] = newBlockSize;
 					break;
 				}
-			case 2: // Block to the right, index is a head node.
+			case 2: // Block to the right; index is a head node.
 				{	
 					const auto blockSize = _data[index + 1] + 1;
 					createSkipBlock(index, blockSize);
@@ -47,7 +48,7 @@ public:
 					const auto blockStartOffset = _data[index - 1];
 					const auto combinedBlockSize = blockStartOffset + _data[index + 1] + 1;
 					_data[index - blockStartOffset] = combinedBlockSize;
-					fillSkipBlock(index, blockStartOffset + 1, combinedBlockSize);
+					fillSkipBlock(index, combinedBlockSize, blockStartOffset + 1);
 				}
 		}
 	}
@@ -81,7 +82,7 @@ public:
 					auto x = _data[index];
 					auto leftBlockLength =  x - 1;
 					const auto rightBlockLength = _data[index - leftBlockLength] - x;
-					_data[index - x] = x;
+					_data[index - leftBlockLength] = leftBlockLength;
 					_data[index] = 0;
 					createSkipBlock(index + 1, rightBlockLength);
 					break;
@@ -108,7 +109,7 @@ private:
 
 	void createSkipBlock(Index index, Index length) noexcept {
 		_data[index] = length;
-		fillSkipBlock(index, length);
+		fillSkipBlock(index + 1, length);
 		
 	}
 

@@ -4,6 +4,10 @@
 #include <boost/range/adaptor/transformed.hpp>
 #include <boost/range/adaptor/filtered.hpp>
 #include <boost/range/algorithm/equal.hpp>
+#include <boost/hana/basic_tuple.hpp>
+#include <boost/hana/for_each.hpp>
+#include <boost/hana/front.hpp>
+#include <boost/hana/type.hpp>
 #include "CppUnitTest.h"
 #include <slotmap/slotmap.hpp>
 #include <slotmap/filtered.hpp>
@@ -155,59 +159,73 @@ namespace slotmaptest {
 		}
 
 		TEST_METHOD(insertDelete) {
-			using TSlotmap = Slotmap<string, VectorAdapter, 8>;
-			using TOracle = vector<pair<typename TSlotmap::Id, string>>;
-			constexpr auto capacity = 10u;
+			constexpr auto capacity = unsigned char(10);
+			auto slotmaps = hana::make_basic_tuple(
+				Slotmap<string, VectorAdapter, 8>{capacity},
+				Slotmap<string, VectorAdapter, 8, 4, SlotmapFlags::SKIPFIELD>{capacity}
+			);
+			using TId = decltype(hana::typeid_(hana::front(slotmaps)))::type::Id;
+			using TOracle = vector<pair<TId, string>>;
 
-			TSlotmap slotmap(capacity);
-			TOracle oracle;
-			
-			insert(slotmap, oracle, "Roel");
-			assertSlotmapEqualsOracle(slotmap, oracle);
+			auto test = [](auto& slotmap) {
+				TOracle oracle;
 
-			auto middle = insert(slotmap, oracle, "Holland");
-			assertSlotmapEqualsOracle(slotmap, oracle);
+				insert(slotmap, oracle, "Roel");
+				assertSlotmapEqualsOracle(slotmap, oracle);
 
-			auto last = insert(slotmap, oracle, "Winter");
-			assertSlotmapEqualsOracle(slotmap, oracle);
+				auto middle = insert(slotmap, oracle, "Holland");
+				assertSlotmapEqualsOracle(slotmap, oracle);
 
-			bool didRemove;
-			didRemove = remove(slotmap, oracle, middle);
-			Assert::IsTrue(didRemove);
-			assertSlotmapEqualsOracle(slotmap, oracle);
+				auto last = insert(slotmap, oracle, "Winter");
+				assertSlotmapEqualsOracle(slotmap, oracle);
 
-			didRemove = remove(slotmap, oracle, middle);
-			Assert::IsFalse(didRemove);
-			assertSlotmapEqualsOracle(slotmap, oracle);
+				bool didRemove;
+				didRemove = remove(slotmap, oracle, middle);
+				Assert::IsTrue(didRemove);
+				assertSlotmapEqualsOracle(slotmap, oracle);
 
-			auto idGermany = insert(slotmap, oracle, "Germany");
-			Assert::AreEqual(decltype(idGermany.index)(1), idGermany.index);
-			assertSlotmapEqualsOracle(slotmap, oracle);
+				didRemove = remove(slotmap, oracle, middle);
+				Assert::IsFalse(didRemove);
+				assertSlotmapEqualsOracle(slotmap, oracle);
 
-			didRemove = remove(slotmap, oracle, last);
-			Assert::IsTrue(didRemove);
-			assertSlotmapEqualsOracle(slotmap, oracle);
+				auto idGermany = insert(slotmap, oracle, "Germany");
+				Assert::AreEqual(decltype(idGermany.index)(1), idGermany.index);
+				assertSlotmapEqualsOracle(slotmap, oracle);
 
-			auto idSummer = insert(slotmap, oracle, "Summer");
-			Assert::AreEqual(decltype(idSummer.index)(2), idSummer.index);
-			assertSlotmapEqualsOracle(slotmap, oracle);
+				didRemove = remove(slotmap, oracle, last);
+				Assert::IsTrue(didRemove);
+				assertSlotmapEqualsOracle(slotmap, oracle);
+
+				auto idSummer = insert(slotmap, oracle, "Summer");
+				Assert::AreEqual(decltype(idSummer.index)(2), idSummer.index);
+				assertSlotmapEqualsOracle(slotmap, oracle);
+			};
+
+			hana::for_each(slotmaps, test);
 		}
 
 		TEST_METHOD(grow) {
-			using TSlotmap = Slotmap<int, VectorAdapter, 32, 16, true>;
-			using TOracle = vector<pair<typename TSlotmap::Id, int>>;
+			auto slotmaps = hana::make_basic_tuple(
+				Slotmap<int, VectorAdapter, 32, 16, SlotmapFlags::GROW>{1},
+				Slotmap<int, VectorAdapter, 32, 16, SlotmapFlags::GROW | SlotmapFlags::SKIPFIELD>{1} 
+			);
+			using TId = decltype(hana::typeid_(hana::front(slotmaps)))::type::Id;
+			using TOracle = vector<pair<TId, int>>;
 			
-			TSlotmap slotmap(1);
-			TOracle oracle;
-			auto capacity = slotmap.capacity();
+			auto test = [](auto& slotmap) {
+				TOracle oracle;
+				auto capacity = slotmap.capacity();
 
-			auto itemCount = 0;
-			do {
-				insert(slotmap, oracle, itemCount++);
-			} while (slotmap.size() < slotmap.capacity());
-			insert(slotmap, oracle, itemCount);
-			Assert::IsTrue(slotmap.capacity() > capacity);
-			assertSlotmapEqualsOracle(slotmap, oracle);
+				auto itemCount = 0;
+				do {
+					insert(slotmap, oracle, itemCount++);
+				} while (slotmap.size() < slotmap.capacity());
+				insert(slotmap, oracle, itemCount);
+				Assert::IsTrue(slotmap.capacity() > capacity);
+				assertSlotmapEqualsOracle(slotmap, oracle);
+			};
+
+			hana::for_each(slotmaps, test);
 		}
 	};
 

@@ -27,24 +27,27 @@ public:
 
 	using Value = T;
 	using TVector = Vector<detail::Item<T, IdBits, GenerationBits>>;
-	using Allocator = typename TVector::allocator_type;
     using Id = detail::Id<IdBits, GenerationBits>;
     using iterator = detail::ValueIter<TVector>;
 	using const_iterator = detail::ConstValueIter<TVector>;
 
-    explicit Slotmap(decltype(Id::index) capacity, const Allocator& alloc = Allocator()) :
-		_randomEngine(std::random_device{}()),
-		_capacity(std::min(capacity, Id::limits().index)),
-        _vector(_capacity, alloc),
-		_top(0),
-		_freeHead(Id::limits().index),
-		_size(0),
-		_skipfield(decltype(_skipfield)::create(_capacity + 1))
-    {
-		std::uniform_int_distribution<unsigned long long> _generationDistribution(1, Id::limits().generation);
-		_generation = static_cast<typename Id::UInt>(_generationDistribution(_randomEngine)); // uniform_int_distribution does not support unsigned char
-    }
+private:
+	using Allocator = typename TVector::allocator_type;
+	using UInt = typename Id::UInt;
+	using SkipfieldArray = Vector<UInt>;
+	using TSkipfield = std::conditional_t<FastIterable, detail::Skipfield<SkipfieldArray>, detail::NullSkipfield<UInt>>;
 
+public:
+	template<bool F = FastIterable,
+			 std::enable_if_t<!F, int> = 0>
+	explicit Slotmap(decltype(Id::index) capacity, const Allocator& slotAllocator = {}) :
+		Slotmap(capacity, TSkipfield{}, slotAllocator) { }
+
+	template<bool F = FastIterable,
+			 typename = std::enable_if_t<F>>
+	explicit Slotmap(decltype(Id::index) capacity, const Allocator& slotAllocator = {}, const typename SkipfieldArray::allocator_type& skipNodeAllocator = {}) :
+		Slotmap(capacity, TSkipfield{std::min(capacity, Id::limits().index) + 1u, skipNodeAllocator}, slotAllocator) { }
+  
     void clear() {
 		for (typename Id::UInt elementIndex = 0; elementIndex < _top; elementIndex++)
 			_vector[elementIndex].id.generation = 0;
@@ -165,9 +168,18 @@ public:
 private:
 	template<class, bool> friend class Filtered;
 
-	using UInt = typename Id::UInt;
-	using SkipfieldArray = Vector<UInt>;
-	using TSkipfield = std::conditional_t<FastIterable, detail::Skipfield<SkipfieldArray>, detail::NullSkipfield<UInt>>;
+	explicit Slotmap(decltype(Id::index) capacity, TSkipfield&& skipfield, const Allocator& slotAllocator) :
+		_randomEngine(std::random_device{}()),
+		_capacity(std::min(capacity, Id::limits().index)),
+		_vector(_capacity, slotAllocator),
+		_top(0),
+		_freeHead(Id::limits().index),
+		_size(0),
+		_skipfield(skipfield)
+	{
+		std::uniform_int_distribution<unsigned long long> _generationDistribution(1, Id::limits().generation);
+		_generation = static_cast<typename Id::UInt>(_generationDistribution(_randomEngine)); // uniform_int_distribution does not support unsigned char
+	}
 
 	UInt _capacity;
 	TVector _vector;

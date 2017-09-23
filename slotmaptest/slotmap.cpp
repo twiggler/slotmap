@@ -223,7 +223,7 @@ namespace slotmaptest {
 			bernoulli_distribution intitialDistribution(.5);
 			uniform_int_distribution<unsigned> toggleDistribution(0, n - 1);
 
-			auto skipfield = Skipfield::create(n);
+			auto skipfield = Skipfield(n);
 			vector<bool> oracle(n);
 
 			for (auto i = 0u; i < n; i++) {

@@ -8,12 +8,12 @@ namespace Twig::Container::detail {
 template<class Vector>
 class Skipfield {
 public:
+	using Allocator = typename Vector::allocator_type;
 	using Index = typename Vector::value_type;
 	using const_iterator = typename Vector::const_iterator;
 
-	static Skipfield create(typename Vector::size_type capacity) {
-		return Skipfield(capacity);
-	}
+	explicit Skipfield(typename Vector::size_type capacity, const Allocator& allocator = Allocator()) :
+		_data(capacity, allocator) { }
 
 	void clear() {
 		std::fill(_data.begin(), _data.end(), 0);
@@ -104,9 +104,6 @@ public:
 	}
 
 private:
-	explicit Skipfield(typename Vector::size_type capacity) :
-		_data(capacity) { }
-
 	void createSkipBlock(Index index, Index length) noexcept {
 		_data[index] = length;
 		fillSkipBlock(index + 1, length);

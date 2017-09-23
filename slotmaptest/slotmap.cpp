@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include <vector>
+#include <random>
 #include <boost/range/adaptor/transformed.hpp>
 #include <boost/range/adaptor/filtered.hpp>
 #include <boost/range/algorithm/equal.hpp>
@@ -16,7 +17,7 @@ template<class T> using VectorAdapter = vector<T>;
 
 namespace slotmaptest {		
 	template<class TSlotmap, class TOracle>
-	void assertAreEqual(const TSlotmap& slotmap, const TOracle& oracle) {
+	void assertSlotmapEqualsOracle(const TSlotmap& slotmap, const TOracle& oracle) {
 		auto transformSlot = [&](const auto& value) { return make_pair(slotmap.id(value), cref(value));  };
 		auto isActive = [](const auto& value) { return value.first.generation != 0; };
 		auto isEqual = [](const auto& a, const auto& b) {
@@ -42,6 +43,31 @@ namespace slotmaptest {
 			const auto* slotmapValue = slotmap.find(oracleElement.first);
 			Assert::IsNotNull(slotmapValue);
 			Assert::AreEqual(oracleElement.second, *slotmapValue);
+		}
+	}
+
+	template<class TSkipmap, class TOracle>
+	void assertSkipmapEqualsOracle(const TSkipmap& skipmap, const TOracle& oracle) {
+		auto nodeIter = skipmap.begin();
+		auto oracleIter = oracle.begin();
+
+		while (nodeIter != skipmap.end()) {
+			if (*oracleIter++) {
+				Assert::AreEqual(0u, *nodeIter++);
+				continue;
+			}
+
+			auto skipBlockLength = 1u;
+			while (oracleIter != oracle.end() && !(*oracleIter)) {
+				skipBlockLength++;
+				oracleIter++;
+			}
+
+			Assert::AreEqual(skipBlockLength, *nodeIter++);
+			auto x = 2u;
+			while (x <= skipBlockLength) {
+				Assert::AreEqual(x++, *nodeIter++);
+			}
 		}
 	}
 
@@ -137,34 +163,34 @@ namespace slotmaptest {
 			TOracle oracle;
 			
 			insert(slotmap, oracle, "Roel");
-			assertAreEqual(slotmap, oracle);
+			assertSlotmapEqualsOracle(slotmap, oracle);
 
 			auto middle = insert(slotmap, oracle, "Holland");
-			assertAreEqual(slotmap, oracle);
+			assertSlotmapEqualsOracle(slotmap, oracle);
 
 			auto last = insert(slotmap, oracle, "Winter");
-			assertAreEqual(slotmap, oracle);
+			assertSlotmapEqualsOracle(slotmap, oracle);
 
 			bool didRemove;
 			didRemove = remove(slotmap, oracle, middle);
 			Assert::IsTrue(didRemove);
-			assertAreEqual(slotmap, oracle);
+			assertSlotmapEqualsOracle(slotmap, oracle);
 
 			didRemove = remove(slotmap, oracle, middle);
 			Assert::IsFalse(didRemove);
-			assertAreEqual(slotmap, oracle);
+			assertSlotmapEqualsOracle(slotmap, oracle);
 
 			auto idGermany = insert(slotmap, oracle, "Germany");
 			Assert::AreEqual(decltype(idGermany.index)(1), idGermany.index);
-			assertAreEqual(slotmap, oracle);
+			assertSlotmapEqualsOracle(slotmap, oracle);
 
 			didRemove = remove(slotmap, oracle, last);
 			Assert::IsTrue(didRemove);
-			assertAreEqual(slotmap, oracle);
+			assertSlotmapEqualsOracle(slotmap, oracle);
 
 			auto idSummer = insert(slotmap, oracle, "Summer");
 			Assert::AreEqual(decltype(idSummer.index)(2), idSummer.index);
-			assertAreEqual(slotmap, oracle);
+			assertSlotmapEqualsOracle(slotmap, oracle);
 		}
 
 		TEST_METHOD(grow) {
@@ -181,7 +207,44 @@ namespace slotmaptest {
 			} while (slotmap.size() < slotmap.capacity());
 			insert(slotmap, oracle, itemCount);
 			Assert::IsTrue(slotmap.capacity() > capacity);
-			assertAreEqual(slotmap, oracle);
+			assertSlotmapEqualsOracle(slotmap, oracle);
+		}
+	};
+
+	TEST_CLASS(Skipfield) {
+	public:
+		TEST_METHOD(skipUnskip) {
+			constexpr auto n = 100u;
+			constexpr auto t = 10000u;
+			using Vector = vector<unsigned>;
+			using Skipfield = Twig::Container::detail::Skipfield<Vector>;
+			random_device rd;
+			mt19937 gen(rd());
+			bernoulli_distribution intitialDistribution(.5);
+			uniform_int_distribution<unsigned> toggleDistribution(0, n - 1);
+
+			auto skipfield = Skipfield::create(n);
+			vector<bool> oracle(n);
+
+			for (auto i = 0u; i < n; i++) {
+				auto bit = intitialDistribution(gen);
+				oracle[i] = bit;
+				if (!bit)
+					skipfield.skip(i);
+			}
+			assertSkipmapEqualsOracle(skipfield, oracle);
+
+			for (auto t = 0u; t < n; t++) {
+				auto i = toggleDistribution(gen);
+				oracle[i] = !oracle[i];
+				auto node = next(skipfield.begin(), i);
+				if (oracle[i])
+					skipfield.unskip(i);
+				else
+					skipfield.skip(i);
+
+				assertSkipmapEqualsOracle(skipfield, oracle);
+			}
 		}
 	};
 }

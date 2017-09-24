@@ -21,7 +21,8 @@ int main() {
 
 	slotmap.push("de ");
 	auto id = slotmap.push("de ");
-	slotmap.push("Jong");
+	auto jong = string("Jong");
+	slotmap.push(move(jong));
 
 	auto element = slotmap.find(id); // lookup the slot containing the first "de "
 	auto removedByElement = slotmap.free(*element);

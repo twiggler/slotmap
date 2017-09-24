@@ -49,7 +49,8 @@ Return a reference to a free slot. An effort is made to keep the slotmap compact
 Throws a `OutOfSlots` exception if all slots are used and `Grow` is false.  
 Throws when `Grow` is true and reallocation fails. 
 
-`Id push(U&& value)`:  
+`Id push(const T& value)`  
+`Id push(T&& value)`   
 Convenience method to allocate a free slot and assign or move-assign `value`.  
 Returns the id associated with the allocated slot.
 

@@ -117,10 +117,16 @@ public:
         return element.value;
     }
 
-	template<class U>
-	Id push(U&& value) {
+	Id push(const T& value) {
 		auto& slot = alloc();
-		slot = std::forward<U>(value);
+		slot = value;
+
+		return id(slot);
+	}
+
+	Id push(T&& value) {
+		auto& slot = alloc();
+		slot = std::move(value);
 		
 		return id(slot);
 	}
@@ -175,7 +181,7 @@ private:
 		_top(0),
 		_freeHead(Id::limits().index),
 		_size(0),
-		_skipfield(skipfield)
+		_skipfield(std::move(skipfield))
 	{
 		std::uniform_int_distribution<unsigned long long> _generationDistribution(1, Id::limits().generation);
 		_generation = static_cast<typename Id::UInt>(_generationDistribution(_randomEngine)); // uniform_int_distribution does not support unsigned char

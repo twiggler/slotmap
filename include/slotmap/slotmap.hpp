@@ -98,7 +98,7 @@ public:
 		else {
 			if (_size == _capacity) {
 				if (Resizable && _capacity != Id::limits().index) {
-					_vector.resize(_size + 1);
+					_vector.emplace_back();	// Assume the allocator value-initializes the item.
 					_capacity = static_cast<decltype(_capacity)>(std::min(_vector.capacity(), std::size_t(Id::limits().index)));
 				}
 				else

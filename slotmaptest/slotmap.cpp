@@ -206,8 +206,8 @@ namespace slotmaptest {
 
 		TEST_METHOD(grow) {
 			auto slotmaps = hana::make_basic_tuple(
-				Slotmap<int, VectorAdapter, 32, 16, SlotmapFlags::GROW>{1},
-				Slotmap<int, VectorAdapter, 32, 16, SlotmapFlags::GROW | SlotmapFlags::SKIPFIELD>{1} 
+				Slotmap<int, VectorAdapter, 32, 16, SlotmapFlags::GROW>{4},
+				Slotmap<int, VectorAdapter, 32, 16, SlotmapFlags::GROW | SlotmapFlags::SKIPFIELD>{4} 
 			);
 			using TId = decltype(hana::typeid_(hana::front(slotmaps)))::type::Id;
 			using TOracle = vector<pair<TId, int>>;
@@ -221,7 +221,7 @@ namespace slotmaptest {
 					insert(slotmap, oracle, itemCount++);
 				} while (slotmap.size() < slotmap.capacity());
 				insert(slotmap, oracle, itemCount);
-				Assert::IsTrue(slotmap.capacity() > capacity);
+				Assert::IsTrue(slotmap.capacity() > capacity + 1); 
 				assertSlotmapEqualsOracle(slotmap, oracle);
 			};
 

@@ -19,7 +19,7 @@ public:
 		std::fill(_data.begin(), _data.end(), 0);
 	}
 
-	void skip(Index index) noexcept { 
+	void skip(Index index)  { 
 		const unsigned char leftBlock = index && _data[index - 1];
 		const unsigned char rightBlock = index < _data.size() - 1 && _data[index + 1];
 
@@ -53,7 +53,7 @@ public:
 		}
 	}
 
-	void unskip(Index index) noexcept {
+	void unskip(Index index)  {
 		const unsigned char leftBlock = index && _data[index - 1];
 		const unsigned char rightBlock = index < _data.size() - 1 && _data[index + 1];
 
@@ -95,22 +95,22 @@ public:
 		_data.push_back(0);
 	}
 
-	const_iterator begin() const noexcept {
+	const_iterator begin() const  {
 		return _data.begin();
 	}
 
-	const_iterator end() const noexcept {
+	const_iterator end() const  {
 		return _data.end();
 	}
 
 private:
-	void createSkipBlock(Index index, Index length) noexcept {
+	void createSkipBlock(Index index, Index length)  {
 		_data[index] = length;
 		fillSkipBlock(index + 1, length);
 		
 	}
 
-	void fillSkipBlock(Index index, Index length, Index start = 2) noexcept {
+	void fillSkipBlock(Index index, Index length, Index start = 2)  {
 		auto i = index;
 		auto x = start;
 

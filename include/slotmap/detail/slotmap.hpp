@@ -1,5 +1,7 @@
 #pragma once
 
+#include "nullskipfield.hpp" 
+#include "skipfield.hpp"
 #include <algorithm>
 #include <boost/integer.hpp>
 #include <boost/iterator/filter_iterator.hpp>
@@ -68,6 +70,18 @@ template<class T, unsigned IdBits, unsigned GenerationBits>
 struct Item {
 	T value;	// value should be the first field to allow reinterpret_cast from T* to Item* and vice-versa.
 	Id<IdBits, GenerationBits> id;
+};
+
+template<bool UseSkipfield,
+		template<class> class Vector,
+		unsigned IdBits,
+		unsigned GenerationBits>
+struct SlotmapTraits {
+	using UInt = typename Id<IdBits, GenerationBits>::UInt;
+	using Skipfield = std::conditional_t<UseSkipfield,
+		Skipfield<Vector<UInt>>,
+		NullSkipfield<UInt>
+	>;
 };
 
 }

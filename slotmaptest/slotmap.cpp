@@ -102,7 +102,7 @@ namespace slotmaptest {
 		TEST_METHOD(creation)
 		{
 			constexpr auto indexBits = 2u;
-			using TSlotmap = Slotmap<string, VectorAdapter, 2 * indexBits>;
+			using TSlotmap = Slotmap<int, VectorAdapter, 2 * indexBits>;
 
 			TSlotmap slotmap(1 << indexBits);
 			constexpr auto maxCapacity = (1u << indexBits) - 1;
@@ -161,11 +161,11 @@ namespace slotmaptest {
 		TEST_METHOD(insertDelete) {
 			constexpr auto capacity = unsigned char(10);
 			auto slotmaps = hana::make_basic_tuple(
-				Slotmap<string, VectorAdapter, 8>{capacity},
-				Slotmap<string, VectorAdapter, 8, 4, SlotmapFlags::SKIPFIELD>{capacity}
+				Slotmap<const char*, VectorAdapter, 8>{capacity},
+				Slotmap<const char*, VectorAdapter, 8, 4, SlotmapFlags::SKIPFIELD>{capacity}
 			);
 			using TId = decltype(hana::typeid_(hana::front(slotmaps)))::type::Id;
-			using TOracle = vector<pair<TId, string>>;
+			using TOracle = vector<pair<TId, const char*>>;
 
 			auto test = [](auto& slotmap) {
 				TOracle oracle;

@@ -11,7 +11,7 @@ using namespace Twig::Container;
 
 template<class T> using VectorAdapter = vector<T>;
 
-using TSlotmap = Slotmap<string, VectorAdapter, 32, 16, SlotmapFlags::GROW | SlotmapFlags::SKIPFIELD>;
+using TSlotmap = Slotmap<char*, VectorAdapter, 32, 16, SlotmapFlags::GROW | SlotmapFlags::SKIPFIELD>;
 
 int main() {
 	auto slotmap = TSlotmap(10); // create a slotmap with 10 slots
@@ -21,8 +21,7 @@ int main() {
 
 	slotmap.push("de ");
 	auto id = slotmap.push("de ");
-	auto jong = string("Jong");
-	slotmap.push(move(jong));
+	slotmap.push("Jong");
 
 	auto element = slotmap.find(id); // lookup the slot containing the first "de "
 	auto removedByElement = slotmap.free(*element);

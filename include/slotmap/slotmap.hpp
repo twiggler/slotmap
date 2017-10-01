@@ -27,7 +27,7 @@ class Slotmap : detail::SlotmapTraits<
 public:
 	static constexpr auto Resizable = bool(Flags & SlotmapFlags::GROW);
 	static constexpr auto FastIterable = bool(Flags & SlotmapFlags::SKIPFIELD);
-
+	
 	using Value = T;
 	using TVector = Vector<detail::Item<T, IdBits, GenerationBits>>;
 	using Id = detail::Id<IdBits, GenerationBits>;
@@ -37,7 +37,7 @@ public:
 	using Skipfield = typename detail::SlotmapTraits<FastIterable, Vector, IdBits, GenerationBits>::Skipfield;
 
 	template<bool F = FastIterable,
-				std::enable_if_t<!F, int> = 0>
+			 typename = std::enable_if_t<!F>>
 	explicit Slotmap(decltype(Id::index) capacity, const Allocator& slotAllocator = {}) :
 		Skipfield(),
 		_randomEngine(std::random_device{}()),
@@ -184,9 +184,11 @@ public:
 	}
 
 private:
-	template<class, bool> friend class Filtered;
-
 	using UInt = typename Id::UInt;
+	using Item = typename TVector::value_type;
+	static_assert(std::is_standard_layout_v<Item> && offsetof(Item, value) == 0, 'Element type T must be a standard layout type.');
+
+	template<class, bool> friend class Filtered;
 
 	void _sampleGeneration() {
 		std::uniform_int_distribution<unsigned long long> _generationDistribution(1, Id::limits().generation);

@@ -7,26 +7,26 @@ namespace Twig::Container {
 template<class TSlotmap, bool>
 class Filtered {
 public:
-	using iterator = decltype(detail::makeFilterIter(std::declval<typename TSlotmap::TVector::value_type*>()));
-	using const_iterator = decltype(detail::makeFilterIter(std::declval<const typename TSlotmap::TVector::value_type*>()));
+	using iterator = typename TSlotmap::Storage::FilterIterator;
+	using const_iterator = typename TSlotmap::Storage::ConstFilterIterator;
 
 	explicit Filtered(TSlotmap& slotmap) :
 		slotmap(&slotmap) {}
 
 	iterator begin() {
-		return detail::makeFilterIter(slotmap->_vector.data(), slotmap->_vector.data() + slotmap->_top);
+		return slotmap->_vector.beginFilter(slotmap->_top);
 	}
 
 	iterator end() {
-		return detail::makeFilterIter(slotmap->_vector.data() + slotmap->_top);
+		return slotmap->_vector.endFilter(slotmap->_top);
 	}
 
 	const_iterator begin() const {
-		return detail::makeFilterIter(slotmap->_vector.data(), slotmap->_vector.data() + slotmap->_top);
+		return slotmap->_vector.beginFilter(slotmap->_top);
 	}
 
 	const_iterator end() const {
-		return detail::makeFilterIter(slotmap->_vector.data() + slotmap->_top);
+		return slotmap->_vector.endFilter(slotmap->_top);
 	}
 
 private:
@@ -36,10 +36,8 @@ private:
 template<class TSlotmap>
 class Filtered<TSlotmap, true> {
 public:
-	using SkipIter = detail::SkipIterator<typename TSlotmap::TVector::value_type*, typename TSlotmap::Skipfield::const_iterator>;
-	using ConstSkipIter = detail::SkipIterator<const typename TSlotmap::TVector::value_type*, typename TSlotmap::Skipfield::const_iterator>;
-	using iterator = decltype(detail::makeValueIter(std::declval<SkipIter>()));
-	using const_iterator = decltype(detail::makeValueIter(std::declval<ConstSkipIter>()));
+	using iterator = detail::SkipIterator<typename TSlotmap::Storage::ValueIterator, typename TSlotmap::Skipfield::const_iterator>;
+	using const_iterator = detail::SkipIterator<typename TSlotmap::Storage::ConstValueIterator, typename TSlotmap::Skipfield::const_iterator>;
 	using Skipfield = typename TSlotmap::Skipfield;
 
 	explicit Filtered(TSlotmap& slotmap) :
@@ -47,19 +45,21 @@ public:
 	}
 
 	iterator begin() {
-		return detail::makeValueIter(detail::make_skip_iter(slotmap->_vector.data(), slotmap->Skipfield::begin()));
+		return detail::make_skip_iter(slotmap->_vector.begin(), slotmap->Skipfield::begin());
 	}
 
 	iterator end() {
-		return detail::makeValueIter(detail::make_skip_iter(slotmap->_vector.data() + slotmap->_top, std::next(slotmap->Skipfield::begin(), slotmap->_top)));
+		return detail::make_skip_iter(std::next(slotmap->_vector.begin(), slotmap->_top),
+									  std::next(slotmap->Skipfield::begin(), slotmap->_top));
 	}
 
 	const_iterator begin() const {
-		return detail::makeValueIter(detail::make_skip_iter(slotmap->_vector.data(), slotmap->Skipfield::begin()));
+		return detail::make_skip_iter(slotmap->_vector.begin(), slotmap->Skipfield::begin());
 	}
 
 	const_iterator end() const {
-		return detail::makeValueIter(detail::make_skip_iter(slotmap->_vector.data() + slotmap->_top, std::next(slotmap->Skipfield::begin(), slotmap->_top)));
+		return detail::make_skip_iter(std::next(slotmap->_vector.begin(), slotmap->_top),
+									  std::next(slotmap->Skipfield::begin(), slotmap->_top));
 	}
 
 private:

@@ -33,6 +33,9 @@
     <ClInclude Include="include\slotmap\detail\skipiterator.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="include\slotmap\detail\tuplestorage.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

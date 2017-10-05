@@ -1,5 +1,8 @@
 #pragma once
 
+#include <boost/iterator/filter_iterator.hpp>
+#include <boost/iterator/transform_iterator.hpp>
+
 namespace Twig::Container::detail {
 
 template<class T, class IdT>

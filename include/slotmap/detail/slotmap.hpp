@@ -3,10 +3,9 @@
 #include "nullskipfield.hpp" 
 #include "skipfield.hpp"
 #include "tuplestorage.hpp"
+#include "scatterstorage.hpp"
 #include <algorithm>
 #include <boost/integer.hpp>
-#include <boost/iterator/filter_iterator.hpp>
-#include <boost/iterator/transform_iterator.hpp>
 
 namespace Twig::Container::detail {
 
@@ -55,7 +54,11 @@ template<template<class> class Vector,
 		 class T,
 		 class IdT>
 struct SelectStorage {
-	using type = TupleStorage<Vector, T, IdT>;
+	static constexpr bool hasStandardLayout = std::is_standard_layout_v<T>;
+	using type = std::conditional_t<hasStandardLayout,
+		TupleStorage<Vector, T, IdT>,
+		ScatterStorage<Vector, T, IdT>
+	>;
 };
 
 }

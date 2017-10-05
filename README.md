@@ -23,7 +23,7 @@ All library files reside in `include/slotmap`.
 All classes reside in the nested namespace `Twig::Container` 
 ## Configuration
 `Slotmap` is a class template which requires two template parameters:  
-`T`, the type to store in the slotmap. `T` must be a [standard layout type](http://en.cppreference.com/w/cpp/concept/StandardLayoutType).   
+`T`, the type to store in the slotmap.  
 `Vector<U>`, a template parameter which specifies which underlying vector container the slotmap uses. An example is `template<class T> using Vector = std::vector<T>`. A possible alternative is to use `folly::fbvector`.  
 
 There are three optional template parameters:  

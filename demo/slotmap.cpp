@@ -11,7 +11,7 @@ using namespace Twig::Container;
 
 template<class T> using VectorAdapter = vector<T>;
 
-using TSlotmap = Slotmap<char*, VectorAdapter, 32, 16, SlotmapFlags::GROW | SlotmapFlags::SKIPFIELD>;
+using TSlotmap = Slotmap<string, VectorAdapter, 32, 16, SlotmapFlags::GROW | SlotmapFlags::SKIPFIELD>;
 
 int main() {
 	auto slotmap = TSlotmap(10); // create a slotmap with 10 slots

@@ -205,6 +205,7 @@ namespace slotmaptest {
 		}
 
 		TEST_METHOD(grow) {
+			// TODO: check new elements are constructed (when appropriate).
 			auto slotmaps = hana::make_basic_tuple(
 				Slotmap<int, VectorAdapter, 32, 16, SlotmapFlags::GROW>{4},
 				Slotmap<int, VectorAdapter, 32, 16, SlotmapFlags::GROW | SlotmapFlags::SKIPFIELD>{4} 

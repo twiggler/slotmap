@@ -118,12 +118,12 @@
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="include\slotmap\detail\nullskipfield.hpp" />
-    <ClInclude Include="include\slotmap\detail\scatterstorage.hpp" />
-    <ClInclude Include="include\slotmap\detail\skipfield.hpp" />
-    <ClInclude Include="include\slotmap\detail\skipiterator.hpp" />
+    <ClInclude Include="include\slotmap\detail\skipfield\nullskipfield.hpp" />
+    <ClInclude Include="include\slotmap\detail\skipfield\skipfield.hpp" />
+    <ClInclude Include="include\slotmap\detail\skipfield\skipiterator.hpp" />
     <ClInclude Include="include\slotmap\detail\slotmap.hpp" />
-    <ClInclude Include="include\slotmap\detail\tuplestorage.hpp" />
+    <ClInclude Include="include\slotmap\detail\storage\scatterstorage.hpp" />
+    <ClInclude Include="include\slotmap\detail\storage\tuplestorage.hpp" />
     <ClInclude Include="include\slotmap\filtered.hpp" />
     <ClInclude Include="include\slotmap\slotmap.hpp" />
   </ItemGroup>

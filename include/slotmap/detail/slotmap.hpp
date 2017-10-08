@@ -1,17 +1,16 @@
 #pragma once
 
-#include "nullskipfield.hpp" 
-#include "skipfield.hpp"
-#include "tuplestorage.hpp"
-#include "scatterstorage.hpp"
-#include <algorithm>
+#include "skipfield/nullskipfield.hpp" 
+#include "skipfield/skipfield.hpp"
+#include "storage/tuplestorage.hpp"
+#include "storage/scatterstorage.hpp"
 #include <boost/integer.hpp>
 
 namespace Twig::Container::detail {
 
 struct OutOfSlots : public std::runtime_error {
 	explicit OutOfSlots() :
-		std::runtime_error("Flatmap out of slots.") { }
+		std::runtime_error("Slotmap out of slots.") { }
 };
 
 template<unsigned IdBits, unsigned GenerationBits>

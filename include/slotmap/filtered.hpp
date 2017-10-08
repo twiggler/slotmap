@@ -1,6 +1,6 @@
 #pragma once
 #include "slotmap.hpp"
-#include "detail/skipiterator.hpp"
+#include "detail/skipfield/skipiterator.hpp"
 
 namespace Twig::Container {
 

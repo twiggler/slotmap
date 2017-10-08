@@ -83,7 +83,7 @@ public:
 	}
 
 	ConstValueIterator begin() const {
-		return _values.end();
+		return _values.begin();
 	}
 
 	FilterIterator beginFilter(Index top) {
@@ -97,7 +97,7 @@ public:
 
 	ConstFilterIterator beginFilter(Index top) const {
 		return makeFilterIter(_values.begin(), std::next(_values.begin(), top),
-							   _indices.begin(), std::next(_indices.end(), top));
+							   _indices.begin(), std::next(_indices.begin(), top));
 	}
 
 	ConstFilterIterator endFilter(Index top) const {

@@ -11,6 +11,7 @@ using detail::OutOfSlots;
 struct SlotmapFlags {
 	static constexpr auto GROW = 1u;
 	static constexpr auto SKIPFIELD = 1u << 1;
+	static constexpr auto SCATTER = 1u << 2;
 };
 
 template<class T,
@@ -23,10 +24,11 @@ class Slotmap : detail::SelectSkipfield<bool(Flags & SlotmapFlags::SKIPFIELD), V
 public:
 	static constexpr auto Resizable = bool(Flags & SlotmapFlags::GROW);
 	static constexpr auto FastIterable = bool(Flags & SlotmapFlags::SKIPFIELD);
+	static constexpr auto Scattering = bool(Flags & SlotmapFlags::SCATTER);
 	
-	using Value = T;
+	using value_type = T;
 	using Id = detail::Id<IdBits, GenerationBits>;
-	using Storage = typename detail::SelectStorage<Vector, T, Id>::type;
+	using Storage = typename detail::SelectStorage<Vector, T, Id, bool(Flags & SlotmapFlags::SCATTER)>::type;
 	using iterator = typename Storage::ValueIterator;
 	using const_iterator = typename Storage::ConstValueIterator;
 	using Allocator = typename Storage::Allocator;

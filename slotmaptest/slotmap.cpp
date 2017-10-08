@@ -4,7 +4,9 @@
 #include <boost/range/adaptor/transformed.hpp>
 #include <boost/range/adaptor/filtered.hpp>
 #include <boost/range/algorithm/equal.hpp>
-#include <boost/hana/basic_tuple.hpp>
+#include <boost/hana/tuple.hpp>
+#include <boost/hana/cartesian_product.hpp>
+#include <boost/hana/transform.hpp>
 #include <boost/hana/for_each.hpp>
 #include <boost/hana/front.hpp>
 #include <boost/hana/type.hpp>
@@ -16,13 +18,28 @@ using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 using namespace std;
 using namespace boost;
 using namespace Twig::Container;
+using namespace hana::literals;
 
 template<class T> using VectorAdapter = vector<T>;
+
+struct Element { // Used in grow test
+	static constexpr auto magic = std::uint32_t(0xFEFEFEFE);
+	Element() : x(magic) {}
+	Element(std::uint32_t v) : x(v) {}
+
+	bool operator==(const Element& other) const { return x == other.x; }
+
+	std::uint32_t x;
+};
+
+namespace Microsoft::VisualStudio::CppUnitTestFramework {
+template<> inline std::wstring ToString<Element>(const Element& e) { return std::to_wstring(e.x); }
+}
 
 namespace slotmaptest {		
 	template<class TSlotmap, class TOracle>
 	void assertSlotmapEqualsOracle(const TSlotmap& slotmap, const TOracle& oracle) {
-		auto transformSlot = [&](const auto& value) { return make_pair(slotmap.id(value), cref(value));  };
+		auto transformSlot = [&](const auto& value) { return make_pair(slotmap.id(value), std::cref(value));  };
 		auto isActive = [](const auto& value) { return value.first.generation != 0; };
 		auto isEqual = [](const auto& a, const auto& b) {
 			if (a.first == b.first) { // Assume free slots have id equal to { 0, 0 }
@@ -91,7 +108,7 @@ namespace slotmaptest {
 	template<class TSlotmap, class TOracle>
 	bool remove(TSlotmap& slotmap, TOracle& oracle, typename TSlotmap::Id id) {
 		auto removedElement = slotmap.free(id);
-		oracle[id.index] = { {0, 0}, typename TSlotmap::Value{} };
+		oracle[id.index] = { {0, 0}, typename TSlotmap::value_type{} };
 
 		return removedElement;
 	}
@@ -160,14 +177,31 @@ namespace slotmaptest {
 
 		TEST_METHOD(insertDelete) {
 			constexpr auto capacity = unsigned char(10);
-			auto slotmaps = hana::make_basic_tuple(
-				Slotmap<const char*, VectorAdapter, 8>{capacity},
-				Slotmap<const char*, VectorAdapter, 8, 4, SlotmapFlags::SKIPFIELD>{capacity}
+			constexpr auto elementTypes = hana::tuple_t<const char *, string>;
+			constexpr auto FlagTypes = hana::make_tuple(0_c, hana::int_c<SlotmapFlags::SKIPFIELD>);
+			auto slotmapTypes = hana::transform(
+				hana::cartesian_product(
+					hana::make_tuple(elementTypes, FlagTypes)
+				),
+				[](auto params) { 
+					return hana::type_c<
+						Slotmap<
+							decltype(+params[0_c])::type,
+							VectorAdapter,
+							8, 4,
+							hana::value(params[1_c])
+						>
+					>;
+				}
 			);
-			using TId = decltype(hana::typeid_(hana::front(slotmaps)))::type::Id;
-			using TOracle = vector<pair<TId, const char*>>;
-
-			auto test = [](auto& slotmap) {
+								
+			auto test = [=](auto slotmapType) {
+				using TSlotmap = decltype(slotmapType)::type;
+				using TId = typename TSlotmap::Id;
+				static_assert(is_same_v<typename TSlotmap::value_type, const char*> != 
+							  is_same_v<typename TSlotmap::Storage, Twig::Container::detail::ScatterStorage<VectorAdapter, typename TSlotmap::value_type, TId>>);
+				TSlotmap slotmap(capacity);
+				using TOracle = vector<pair<TId, typename TSlotmap::value_type>>;
 				TOracle oracle;
 
 				insert(slotmap, oracle, "Roel");
@@ -201,32 +235,48 @@ namespace slotmaptest {
 				assertSlotmapEqualsOracle(slotmap, oracle);
 			};
 
-			hana::for_each(slotmaps, test);
+			hana::for_each(slotmapTypes, test);
 		}
 
 		TEST_METHOD(grow) {
-			// TODO: check new elements are constructed (when appropriate).
-			auto slotmaps = hana::make_basic_tuple(
-				Slotmap<int, VectorAdapter, 32, 16, SlotmapFlags::GROW>{4},
-				Slotmap<int, VectorAdapter, 32, 16, SlotmapFlags::GROW | SlotmapFlags::SKIPFIELD>{4} 
+			constexpr auto FlagTypes = hana::make_tuple(
+				hana::int_c<SlotmapFlags::GROW>,
+				hana::int_c<SlotmapFlags::GROW | SlotmapFlags::SKIPFIELD>,
+				hana::int_c<SlotmapFlags::GROW | SlotmapFlags::SCATTER>,
+				hana::int_c<SlotmapFlags::GROW | SlotmapFlags::SKIPFIELD | SlotmapFlags::SCATTER>
 			);
-			using TId = decltype(hana::typeid_(hana::front(slotmaps)))::type::Id;
-			using TOracle = vector<pair<TId, int>>;
 			
-			auto test = [](auto& slotmap) {
+			auto slotmapTypes = hana::transform(
+				FlagTypes,
+				[](auto flag) { return hana::type_c<Slotmap<Element, VectorAdapter, 32, 16, hana::value(flag)>>; }
+			);
+			
+			auto test = [](auto slotmapType) {
+				using TSlotmap = decltype(slotmapType)::type;
+				using TId = typename TSlotmap::Id;
+				static_assert(TSlotmap::Scattering != is_same_v<typename TSlotmap::Storage, Twig::Container::detail::TupleStorage<VectorAdapter, typename TSlotmap::value_type, TId>>);
+				using TOracle = vector<pair<TId, Element>>;
+				
+				TSlotmap slotmap(4);
 				TOracle oracle;
 				auto capacity = slotmap.capacity();
 
-				auto itemCount = 0;
+				auto itemCount = std::uint32_t(0);
 				do {
-					insert(slotmap, oracle, itemCount++);
+					insert(slotmap, oracle, Element{itemCount++});
 				} while (slotmap.size() < slotmap.capacity());
-				insert(slotmap, oracle, itemCount);
+				insert(slotmap, oracle, itemCount++);
 				Assert::IsTrue(slotmap.capacity() > capacity + 1); 
 				assertSlotmapEqualsOracle(slotmap, oracle);
+
+				do {
+					const auto& item = slotmap.alloc();
+					Assert::AreEqual(item.x, Element::magic);
+					itemCount++;
+				} while (itemCount < slotmap.capacity());
 			};
 
-			hana::for_each(slotmaps, test);
+			hana::for_each(slotmapTypes, test);
 		}
 	};
 

@@ -79,6 +79,7 @@ public:
 	Index grow() {
 		_vector.emplace_back();
 		auto capacity = Index(std::min(_vector.capacity(), std::size_t(IdT::limits().index)));
+		_vector.resize(capacity);
 		return capacity;
 	}
 
@@ -107,6 +108,8 @@ public:
 	}
 
 private:
+	static_assert(std::is_standard_layout_v<T> && offsetof(TItem, value) == 0);
+
 	TVector _vector;
 };
 

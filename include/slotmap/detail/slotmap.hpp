@@ -36,8 +36,6 @@ bool operator==(const Id<IdBits, GenerationBits>& a, const Id<IdBits, Generation
 		a.generation == b.generation;
 }
 
-
-
 template<bool UseSkipfield,
 		 template<class> class Vector,
 		 unsigned IdBits,
@@ -52,12 +50,13 @@ struct SelectSkipfield {
 
 template<template<class> class Vector,
 		 class T,
-		 class IdT>
+		 class IdT,
+		 bool Scatter>
 struct SelectStorage {
 	static constexpr bool hasStandardLayout = std::is_standard_layout_v<T>;
-	using type = std::conditional_t<hasStandardLayout,
-		TupleStorage<Vector, T, IdT>,
-		ScatterStorage<Vector, T, IdT>
+	using type = std::conditional_t<!hasStandardLayout || Scatter,
+		ScatterStorage<Vector, T, IdT>,
+		TupleStorage<Vector, T, IdT>
 	>;
 };
 

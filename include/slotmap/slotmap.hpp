@@ -11,6 +11,7 @@ using detail::OutOfSlots;
 struct SlotmapFlags {
 	static constexpr auto GROW = 1u;
 	static constexpr auto SKIPFIELD = 1u << 1;
+	static constexpr auto SCATTER = 1u << 2;
 };
 
 template<class T,
@@ -18,23 +19,20 @@ template<class T,
 		 unsigned IdBits = sizeof(unsigned) * CHAR_BIT,
 		 unsigned GenerationBits = IdBits / 2,
 		 unsigned Flags = 0>
-class Slotmap : detail::SlotmapTraits<
-	static_cast<bool>(Flags & SlotmapFlags::SKIPFIELD),
-	Vector,
-	IdBits,
-	GenerationBits>::Skipfield
+class Slotmap : detail::SelectSkipfield<bool(Flags & SlotmapFlags::SKIPFIELD), Vector, IdBits, GenerationBits>::type
 {
 public:
 	static constexpr auto Resizable = bool(Flags & SlotmapFlags::GROW);
 	static constexpr auto FastIterable = bool(Flags & SlotmapFlags::SKIPFIELD);
+	static constexpr auto Scattering = bool(Flags & SlotmapFlags::SCATTER);
 	
-	using Value = T;
-	using TVector = Vector<detail::Item<T, IdBits, GenerationBits>>;
+	using value_type = T;
 	using Id = detail::Id<IdBits, GenerationBits>;
-	using iterator = detail::ValueIter<TVector>;
-	using const_iterator = detail::ConstValueIter<TVector>;
-	using Allocator = typename TVector::allocator_type;
-	using Skipfield = typename detail::SlotmapTraits<FastIterable, Vector, IdBits, GenerationBits>::Skipfield;
+	using Storage = typename detail::SelectStorage<Vector, T, Id, bool(Flags & SlotmapFlags::SCATTER)>::type;
+	using iterator = typename Storage::ValueIterator;
+	using const_iterator = typename Storage::ConstValueIterator;
+	using Allocator = typename Storage::Allocator;
+	using Skipfield = typename detail::SelectSkipfield<FastIterable, Vector, IdBits, GenerationBits>::type;
 
 	template<bool F = FastIterable,
 			 typename = std::enable_if_t<!F>>
@@ -65,7 +63,7 @@ public:
 
 	void clear() {
 		for (typename Id::UInt elementIndex = 0; elementIndex < _top; elementIndex++)
-			_vector[elementIndex].id.generation = 0;
+			_vector.id(elementIndex).generation = 0;
 
 		Skipfield::clear();
 		_size = 0;
@@ -77,19 +75,17 @@ public:
 	T* find(Id id) {
 		assert(id.generation);
 
-		auto& item = _vector[id.index];
-		return item.id == id ? &item.value : nullptr;
+		return _vector.id(id.index) == id ? &_vector.value(id.index) : nullptr;
 	}
 
 	const T* find(Id id) const {
 		assert(id.generation);
 
-		const auto& item = _vector[id.index];
-		return item.id == id ? &item.value : nullptr;
+		return _vector.id(id.index) == id ? &_vector.value(id.index) : nullptr;
 	}
 
-	Id id(const T& element) const {
-		auto id = reinterpret_cast<const typename TVector::value_type&>(element).id;
+	Id id(const T& value) const {
+		auto id = _vector.idByValue(value);
 		return id.generation != 0 ? id : Id{ 0, 0 };
 	}
 
@@ -106,14 +102,13 @@ public:
 
 		if (_freeHead < _top) {
 			index = _freeHead;
-			_freeHead = _vector[index].id.index;
+			_freeHead = _vector.id(index).index;
 			this->unskip(index);
 		} else {
 			if (_size == _capacity) {
-				if (Resizable && _capacity != Id::limits().index) {
-					_vector.emplace_back();	// Assume the allocator value-initializes the item.
-					_capacity = static_cast<decltype(_capacity)>(std::min(_vector.capacity(), std::size_t(Id::limits().index)));
-				} else
+				if (Resizable && _capacity != Id::limits().index)
+					_capacity = _vector.grow();	// Assume the allocator value-initializes the item.
+				else
 					throw OutOfSlots();
 			}
 
@@ -121,12 +116,12 @@ public:
 			this->grow();
 		}
 
-		auto& element = _vector[index];
-		element.id = { index, _generation };
+		auto& id = _vector.id(index);
+		id = { index, _generation };
 		_size++;
 		_generation = std::max(1, (_generation + 1) & Id::limits().generation); // Generation of zero indicates unused item.
 
-		return element.value;
+		return _vector.value(index);
 	}
 
 	Id push(const T& value) {
@@ -144,14 +139,14 @@ public:
 	}
 
 	bool free(T& value) {
-		auto& markedItem = reinterpret_cast<typename TVector::value_type&>(value);
-		if (markedItem.id.generation == 0)
+		auto& id = _vector.idByValue(value);
+		if (id.generation == 0)
 			return false;
 
 		auto oldFreeHead = _freeHead;    // Cannot use std::swap because it is illegal to form a reference to a bit field.
-		_freeHead = markedItem.id.index;
-		markedItem.id = { oldFreeHead, 0 };
-		this->skip(&markedItem - _vector.data());
+		_freeHead = id.index;
+		this->skip(id.index);
+		id = { oldFreeHead, 0 };
 		_size--;
 
 		return true;
@@ -168,25 +163,23 @@ public:
 	}
 
 	iterator begin() {
-		return detail::makeValueIter(_vector.data());
+		return _vector.begin();
 	}
 
 	iterator end() {
-		return detail::makeValueIter(_vector.data() + _top);
+		return std::next(_vector.begin(), _top);
 	}
 
 	const_iterator begin() const {
-		return detail::makeValueIter(_vector.data());
+		return _vector.begin();
 	}
 
 	const_iterator end() const {
-		return detail::makeValueIter(_vector.data() + _top);
+		return std::next(_vector.begin(), _top);
 	}
 
 private:
 	using UInt = typename Id::UInt;
-	using Item = typename TVector::value_type;
-	static_assert(std::is_standard_layout_v<Item> && offsetof(Item, value) == 0, 'Element type T must be a standard layout type.');
 
 	template<class, bool> friend class Filtered;
 
@@ -196,7 +189,7 @@ private:
 	}
 
 	UInt _capacity;
-	TVector _vector;
+	Storage _vector;
 	std::mt19937 _randomEngine;
 	UInt _generation;
 	UInt _top;

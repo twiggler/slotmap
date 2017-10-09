@@ -1,10 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <Filter Include="Source Files">
-      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
-      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
-    </Filter>
     <Filter Include="Header Files">
       <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
       <Extensions>h;hh;hpp;hxx;hm;inl;inc;xsd</Extensions>
@@ -12,6 +8,19 @@
     <Filter Include="Resource Files">
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav</Extensions>
+    </Filter>
+    <Filter Include="Header Files\detail">
+      <UniqueIdentifier>{ad572584-6e94-4a95-9e32-b803efe9d900}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\detail\storage">
+      <UniqueIdentifier>{2690353d-baad-4f49-ad78-2210dbc6e9c2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\detail\skipfield">
+      <UniqueIdentifier>{43fb02f1-1854-4e80-96bd-7b53fb937a16}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="demo">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -22,24 +31,30 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\slotmap\detail\slotmap.hpp">
-      <Filter>Header Files</Filter>
+      <Filter>Header Files\detail</Filter>
     </ClInclude>
-    <ClInclude Include="include\slotmap\detail\nullskipfield.hpp">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="include\slotmap\detail\storage\scatterstorage.hpp">
+      <Filter>Header Files\detail\storage</Filter>
     </ClInclude>
-    <ClInclude Include="include\slotmap\detail\skipfield.hpp">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="include\slotmap\detail\storage\tuplestorage.hpp">
+      <Filter>Header Files\detail\storage</Filter>
     </ClInclude>
-    <ClInclude Include="include\slotmap\detail\skipiterator.hpp">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="include\slotmap\detail\skipfield\nullskipfield.hpp">
+      <Filter>Header Files\detail\skipfield</Filter>
     </ClInclude>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="packages.config" />
+    <ClInclude Include="include\slotmap\detail\skipfield\skipiterator.hpp">
+      <Filter>Header Files\detail\skipfield</Filter>
+    </ClInclude>
+    <ClInclude Include="include\slotmap\detail\skipfield\skipfield.hpp">
+      <Filter>Header Files\detail\skipfield</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="demo\slotmap.cpp">
-      <Filter>Source Files</Filter>
+      <Filter>demo</Filter>
     </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
   </ItemGroup>
 </Project>

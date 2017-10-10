@@ -1,16 +1,5 @@
 #include "stdafx.h"
-#include <vector>
-#include <random>
-#include <boost/range/adaptor/transformed.hpp>
-#include <boost/range/adaptor/filtered.hpp>
-#include <boost/range/algorithm/equal.hpp>
-#include <boost/hana/tuple.hpp>
-#include <boost/hana/cartesian_product.hpp>
-#include <boost/hana/transform.hpp>
-#include <boost/hana/for_each.hpp>
-#include <boost/hana/front.hpp>
-#include <boost/hana/type.hpp>
-#include "CppUnitTest.h"
+
 #include <slotmap/slotmap.hpp>
 #include <slotmap/filtered.hpp>
 

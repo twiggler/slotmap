@@ -37,9 +37,8 @@ public:
 	using IndexAllocator = typename std::allocator_traits<Allocator>::template rebind_alloc<IdT>;
 	using ValueIterator = typename ValueVector::iterator;
 	using ConstValueIterator = typename ValueVector::const_iterator;
-	using IndexIterator = typename IndexVector::iterator;
 	using ConstIndexIterator = typename IndexVector::const_iterator;
-	using FilterIterator = decltype(makeFilterIter(std::declval<ValueIterator>(), std::declval<IndexIterator>()));
+	using FilterIterator = decltype(makeFilterIter(std::declval<ValueIterator>(), std::declval<ConstIndexIterator>()));
 	using ConstFilterIterator = decltype(makeFilterIter(std::declval<ConstValueIterator>(), std::declval<ConstIndexIterator>()));
 
 	explicit ScatterStorage(Index capacity, const Allocator& allocator = {}) :

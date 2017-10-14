@@ -2,15 +2,23 @@
 
 Slotmap is a sequence container with weak reference keys written in C++17. It is especially useful for writing video games.
 
-A [demo](demo/slotmap.cpp) is provided in `demo/slotmap.cpp`.
+Suppose you are writing a space combat simulator, and the player wants to lock his missile on the enemy spacecraft. This requires storing a reference to the enemy spacecraft. One solution would be to store a non-owning naked pointer to the target ship. However, this reference might outlive the target, possibly resulting in hard to track bugs.
+
+ Another  solution is to hold a `std::shared_ptr` pointing to the enemy spacecraft. Because `std::shared_ptr` has shared ownership semantics, this would prevent the destruction of the enemy ship when it flies into an astroid for as long as we retain the missile lock. For this reason, the `std::shared_ptr` is also not an ideal solution.
+
+Alternatively, we could employ `std::weak_ptr`, which is a non-owning smart pointer. When the missile needs to correct it's course, we try to acquire a `std::shared_ptr` from the `std::weak_ptr`, which will gracefully fail when the target is already destroyed. Moreover, we release the acquired `std::shared_ptr` after the missile has updates its flight trajectory. Although correct, there are two problems with this approach. Firstly, `std::shared_ptr` employs thread-safe reference counting, which can be relatively slow. Further, suppose that dead game entities are removed at the end of the frame; in that case, we can do better than reference counting and exploit domain-specific knowledge about the life cycle of entities.
+
+Instead of storing a direct reference, we could store a key to the target, provided that this key is easily interchangeable for a real reference. Because game logic prohibits destruction of the target while we are busy recalculating the missile's trajectory,  we can forego reference counting. Off course, when the target is destroyed, our key must be rendered invalid automatically; this is were `Slotmap` comes into play.    
 
 Features:
 + Slots are stored linear in memory.
 + Fast iteration.
 + Constant time allocation and deallocation.
 + Zero overhead lookups.
-+ Reusing a slot invalidates the key.
++ Freeing a slot invalidates the key.
 + Stable references to elements.
+
+A [demo](demo/slotmap.cpp) is provided in `demo/slotmap.cpp`.
 
 Slotmap is inspired by [this article](http://greysphere.tumblr.com/post/31601463396/data-arrays) by Jeff Gates, and [this](https://gamedev.stackexchange.com/questions/33888/what-is-the-most-efficient-container-to-store-dynamic-game-objects-in) discussion.  
 Fast iteration is available by optionally using [skipfields](https://link.springer.com/epdf/10.1007/s40869-017-0038-3?author_access_token=cyehqAFuAEnx5rF1-5V3sve4RwlQNchNByi7wbcMAY5wgvdWX7FmurWl4trUGoDtyDH43_RnVt3Y6cI8090dRW3kI3LvrU9wCVzxVe_1gAg2Oc0OlIjjsBpTjDEAEr9gpnZenJKZ8SpkipppuHk4PA==).  

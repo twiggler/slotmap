@@ -43,7 +43,7 @@ struct SelectSkipfield {
 	using UInt = typename Id<IdBits, GenerationBits>::UInt;
 	using type = std::conditional_t<UseSkipfield,
 		Skipfield<Vector<UInt>>,
-		NullSkipfield<UInt>
+		NullSkipfield<Vector<UInt>>
 	>;
 };
 

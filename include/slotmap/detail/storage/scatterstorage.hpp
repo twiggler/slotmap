@@ -34,7 +34,7 @@ public:
 	using IndexVector = Vector<IdT>;
 	using Index = typename IdT::UInt;
 	using Allocator = typename ValueVector::allocator_type;
-	using IndexAllocator = typename std::allocator_traits<Allocator>::template rebind_alloc<IdT>;
+	using IndexAllocator = typename IndexVector::allocator_type;
 	using ValueIterator = typename ValueVector::iterator;
 	using ConstValueIterator = typename ValueVector::const_iterator;
 	using ConstIndexIterator = typename IndexVector::const_iterator;

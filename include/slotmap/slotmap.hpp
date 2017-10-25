@@ -33,27 +33,12 @@ public:
 	using const_iterator = typename Storage::ConstValueIterator;
 	using Allocator = typename Storage::Allocator;
 	using Skipfield = typename detail::SelectSkipfield<FastIterable, Vector, IdBits, GenerationBits>::type;
-
-	template<bool F = FastIterable,
-			 typename = std::enable_if_t<!F>>
-	explicit Slotmap(decltype(Id::index) capacity, const Allocator& slotAllocator = {}) :
-		Skipfield(),
+		
+	explicit Slotmap(decltype(Id::index) capacity, const Allocator& allocator = {}) :
+		Skipfield(std::min(capacity, Id::limits().index) + 1u, typename Skipfield::Allocator(allocator)),
 		_randomEngine(std::random_device{}()),
 		_capacity(std::min(capacity, Id::limits().index)),
-		_vector(_capacity, slotAllocator),
-		_top(0),
-		_freeHead(Id::limits().index),
-		_size(0)
-	{
-		_sampleGeneration();
-	}
-
-	template<class SkipfieldT = Skipfield> // In the case of Skipfield == NullSkipfield, SFINAE will occur because NullSkipfield has no nested Allocator.
-	explicit Slotmap(decltype(Id::index) capacity, const Allocator& slotAllocator = {}, const typename SkipfieldT::Allocator& skipNodeAllocator = {}) :
-		Skipfield(std::min(capacity, Id::limits().index) + 1u, skipNodeAllocator),
-		_randomEngine(std::random_device{}()),
-		_capacity(std::min(capacity, Id::limits().index)),
-		_vector(_capacity, slotAllocator),
+		_vector(_capacity, allocator),
 		_top(0),
 		_freeHead(Id::limits().index),
 		_size(0)

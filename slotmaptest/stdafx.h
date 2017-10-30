@@ -20,5 +20,11 @@
 #include <boost/hana/cartesian_product.hpp>
 #include <boost/hana/transform.hpp>
 #include <boost/hana/for_each.hpp>
+#include <boost/hana/unpack.hpp>
+#include <boost/hana/ext/std/tuple.hpp>
 #include <boost/hana/front.hpp>
 #include <boost/hana/type.hpp>
+#include <foonathan/memory/memory_arena.hpp>
+#include <foonathan/memory/memory_stack.hpp>
+#include <foonathan/memory/segregator.hpp>
+#include <foonathan/memory/std_allocator.hpp>

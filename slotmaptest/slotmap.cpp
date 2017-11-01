@@ -8,8 +8,16 @@ using namespace std;
 using namespace boost;
 using namespace Twig::Container;
 using namespace hana::literals;
+using namespace foonathan::memory;
 
 template<class T> using VectorAdapter = vector<T>;
+
+template<class RawAllocator>
+struct VectorAllocatorAdapter {
+	template<class T>
+	using VectorAdapter = vector<T, std_allocator<T, RawAllocator>>;
+};
+
 
 struct Element { // Used in grow test
 	static constexpr auto magic = std::uint32_t(0xFEFEFEFE);
@@ -22,7 +30,7 @@ struct Element { // Used in grow test
 };
 
 namespace Microsoft::VisualStudio::CppUnitTestFramework {
-template<> inline std::wstring ToString<Element>(const Element& e) { return std::to_wstring(e.x); }
+	template<> inline std::wstring ToString<Element>(const Element& e) { return std::to_wstring(e.x); }
 }
 
 namespace slotmaptest {		
@@ -266,6 +274,47 @@ namespace slotmaptest {
 			};
 
 			hana::for_each(slotmapTypes, test);
+		}
+
+		TEST_METHOD(allocator) {
+			constexpr auto numberOfSlots = uint16_t(10);
+			constexpr auto slack = size_t(32); // Track https://github.com/foonathan/memory/issues/18
+			using tupleNodeSizes = NodeSizes<uint32_t, 32, 16>;
+			using scatterTupleNodeSizes = NodeSizes<uint32_t, 32, 16, SlotmapFlags::SCATTER>;
+			
+			auto tupleAllocator = memory_stack<fixed_block_allocator<>>(tupleNodeSizes::elementBlock(numberOfSlots) + slack);
+			static_assert(scatterTupleNodeSizes::elementSize() == tupleNodeSizes::idSize());  // Slotmap element size is equal to size of id
+			auto elementAndIdAllocator = memory_stack<fixed_block_allocator<>>((scatterTupleNodeSizes::elementBlock(numberOfSlots) + slack) * 2);
+			auto skipfieldAllocator = memory_stack<fixed_block_allocator<>>(tupleNodeSizes::skipfieldBlock(numberOfSlots) + slack);
+			
+			auto test = [&](auto flags, auto&& allocator) {
+				auto tupleUnwind = hana::transform(
+					std::make_tuple(std::ref(tupleAllocator), std::ref(elementAndIdAllocator), std::ref(skipfieldAllocator)),
+						[](auto& stackAllocator) { return memory_stack_raii_unwind<std::decay_t<decltype(stackAllocator)>>(stackAllocator); }
+				);
+				
+				using TAllocator = std::decay_t<decltype(allocator)>;
+				using TSlotmap = Slotmap<uint32_t, VectorAllocatorAdapter<TAllocator>::VectorAdapter, 32, 16, hana::value(flags)>;
+				
+				TSlotmap slotmap(numberOfSlots, allocator);
+			};
+
+			test(hana::int_c<0>, tupleAllocator);
+			test(hana::int_c<SlotmapFlags::SKIPFIELD>,
+				make_segregator(
+					threshold(tupleNodeSizes::skipfieldBlock(numberOfSlots), make_allocator_reference(skipfieldAllocator)),
+					threshold(tupleNodeSizes::elementBlock(numberOfSlots), make_allocator_reference(tupleAllocator)),
+					null_allocator{}
+				)
+			);
+			test(hana::int_c<SlotmapFlags::SCATTER>, elementAndIdAllocator);
+			test(hana::int_c<SlotmapFlags::SKIPFIELD | SlotmapFlags::SCATTER>,
+				make_segregator(
+					threshold(scatterTupleNodeSizes::skipfieldBlock(numberOfSlots), make_allocator_reference(skipfieldAllocator)),
+					threshold(scatterTupleNodeSizes::elementBlock(numberOfSlots), make_allocator_reference(elementAndIdAllocator)),
+					null_allocator{}
+				)
+			);
 		}
 	};
 

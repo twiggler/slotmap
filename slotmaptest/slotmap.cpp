@@ -278,7 +278,7 @@ namespace slotmaptest {
 
 		TEST_METHOD(allocator) {
 			constexpr auto numberOfSlots = uint16_t(10);
-			constexpr auto slack = size_t(32);
+			constexpr auto slack = size_t(32); // Track https://github.com/foonathan/memory/issues/18
 			using tupleNodeSizes = NodeSizes<uint32_t, 32, 16>;
 			using scatterTupleNodeSizes = NodeSizes<uint32_t, 32, 16, SlotmapFlags::SCATTER>;
 			

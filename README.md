@@ -32,24 +32,24 @@ All classes reside in the nested namespace `Twig::Container`
 ## Configuration
 `Slotmap` is a class template which requires two template parameters:  
 `T`, the type to store in the slotmap.  
+
 `Vector<U>`, a template parameter which specifies which underlying vector container the slotmap uses. An example is `template<class T> using Vector = std::vector<T>`. A possible alternative is to use `folly::fbvector`.  
 
 There are three optional template parameters:  
-`IdBits`, designates the size of the id in bits. A slotmap id type consists of a public `index` member field and a public `generation` member field. After every allocation, a global generation counter is incremented and assigned to the id of the allocated slot. The default is the size in bits of an unsigned int.   
+`IdBits`, designates the size of the id in bits. A slotmap id type consists of a public `index` member field and a public `generation` member field. After every allocation, a global generation counter is incremented and assigned to the id of the allocated slot. The default is the size in bits of an unsigned int.  
+
 `GenerationBits`, how many bits to use for the generation part of the id. Key collisions for slot *s* occur after 2^`GenerationBits`-2 allocations of any slot including *s*, followed by a deallocation-allocation of slot *s*. The default value equals `IdBits` divided by two.  
+
 `Flags`, controls grow and interation behavior by combining members of `SlotmapFlags`:   
  Setting `SlotmapFlags::GROW` allows the slotmap to grow and act as a dynamic array. __When allowed to grow, the slotmap loses constant time allocation and stable references to elements.__ The reallocation strategy of the underlying `Vector` container is used. By default, the `Slotmap` is a static array which is unable to grow.  
+
  Setting `SlotmapFlags::SKIPFIELD` allows for faster iteration by jumping over blocks of removed elements in constant time. This is accomplished by implementation of a [skipfield](https://link.springer.com/epdf/10.1007/s40869-017-0038-3?author_access_token=cyehqAFuAEnx5rF1-5V3sve4RwlQNchNByi7wbcMAY5wgvdWX7FmurWl4trUGoDtyDH43_RnVt3Y6cI8090dRW3kI3LvrU9wCVzxVe_1gAg2Oc0OlIjjsBpTjDEAEr9gpnZenJKZ8SpkipppuHk4PA==). __Because the skipfield needs to updated after every allocation and deallocation, the slotmap loses constant time allocation and deallocation. Moreover, the memory overhead of the slotmap is increased by the storage cost of the skipfield.__ By default, the slotmap uses a boolean flag to skip deallocated elements, which may be slower to iterate due to branching.  
+   
  Setting `SlotmapFlags::SCATTER` stores the value and key in parallel arrays. The default when `T` is a standard layout type is to store the value and key in an array of tuples.     
 ## Methods
 ### Construction
 `SlotMap(<auto> capacity, const Allocator& alloc = {})`:  
-Construct a slotmap with a capacity of `capacity`. The allocator is passed to the underlying `Vector`. `capacity` is truncated to the largest number of elements that can be represented by an id. This overload is only available when the slotmap is configured without `SlotmapFlags::SKIPFIELD`.
-
-`SlotMap(<auto> capacity, const SlotAlloc& slotAlloc = {}, const SkipfieldAlloc& skipAlloc = {})`:  
-Construct a slotmap with a capacity of `capacity`. The `slotAlloc` is passed to the underlying Vector. The `skipAlloc` is passed to the skipfield.  `capacity` is truncated to the largest number of elements that can be represented by an id. This overload is only available when the slotmap is configured with `SlotmapFlags::SKIPFIELD`.
-
-
+Construct a slotmap with a capacity of `capacity`. The provided allocator must be STL-compatible. `capacity` is truncated to the largest number of elements that can be represented by an id. 
 
 ### Allocation / deallocation
 `T& alloc()`:  

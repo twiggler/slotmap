@@ -15,15 +15,15 @@ struct SlotmapFlags {
 };
 
 template<class T,
-	unsigned IdBits,
-	unsigned GenerationBits,
+	unsigned IdBits = sizeof(unsigned) * CHAR_BIT,
+	unsigned GenerationBits = IdBits / 2,
 	unsigned Flags = 0>
 struct NodeSizes {
 	using Id = detail::Id<IdBits, GenerationBits>;
 	using UInt = typename Id::UInt;
 
 	static constexpr auto elementSize() {
-		if (!is_standard_layout_v<T> || Flags & SlotmapFlags::SCATTER)
+		if (!std::is_standard_layout_v<T> || Flags & SlotmapFlags::SCATTER)
 			return sizeof(T);
 		else
 			return sizeof(detail::Item<T, Id>);

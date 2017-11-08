@@ -174,7 +174,7 @@ namespace slotmaptest {
 
 		TEST_METHOD(insertDelete) {
 			constexpr auto capacity = unsigned char(10);
-			constexpr auto elementTypes = hana::tuple_t<const char *, string>;
+			constexpr auto elementTypes = hana::tuple_t<const char*, string>;
 			constexpr auto FlagTypes = hana::make_tuple(0_c, hana::int_c<SlotmapFlags::SKIPFIELD>);
 			auto slotmapTypes = hana::transform(
 				hana::cartesian_product(

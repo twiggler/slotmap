@@ -11,6 +11,8 @@
 #include "CppUnitTest.h"
 
 // TODO: reference additional headers your program requires here
+#define _ITERATOR_DEBUG_LEVEL 0
+
 #include <vector>
 #include <random>
 #include <boost/range/adaptor/transformed.hpp>

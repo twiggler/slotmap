@@ -38,7 +38,7 @@ private:
 	}
 
 	void decrement() {
-		auto skipCount = *(--skipfieldNode);
+		auto skipCount = *(--_skipfieldNode);
 		_skipfieldNode -= skipCount;
 		this->base_reference() -= skipCount - 1;
 	}

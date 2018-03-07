@@ -30,6 +30,7 @@ public:
 
 private:
 	friend class boost::iterator_core_access;
+	template<class, class> friend class SkipIterator;
 
 	void increment() {
 		auto skipCount = *(++_skipfieldNode);

@@ -92,11 +92,11 @@ public:
 	}
 
 	FilterIterator beginFilter(Index top) {
-		return makeFilterIter(_vector.data(), vector_data() + top);
+		return makeFilterIter(_vector.data(), _vector.data() + top);
 	}
 
 	FilterIterator endFilter(Index top) {
-		return makeFilterIter(vector_data() + top);
+		return makeFilterIter(_vector.data() + top);
 	}
 
 	ConstFilterIterator beginFilter(Index top) const {

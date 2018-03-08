@@ -8,6 +8,8 @@ namespace Twig::Container {
 
 using detail::OutOfSlots;
 
+template<class, bool> class Filtered;
+
 struct SlotmapFlags {
 	static constexpr auto GROW = 1u;
 	static constexpr auto SKIPFIELD = 1u << 1;

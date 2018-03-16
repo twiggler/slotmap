@@ -70,11 +70,11 @@ public:
 	using Storage = typename detail::SelectStorage<Vector, T, Id, bool(Flags & SlotmapFlags::SCATTER)>::type;
 	using iterator = typename Storage::ValueIterator;
 	using const_iterator = typename Storage::ConstValueIterator;
-	using Allocator = typename Storage::Allocator;
 	using Skipfield = typename detail::SelectSkipfield<FastIterable, Vector, IdBits, GenerationBits>::type;
-		
+
+	template<class Allocator = typename Vector<T>::allocator_type>
 	explicit Slotmap(decltype(Id::index) capacity, const Allocator& allocator = {}) :
-		Skipfield(std::min(capacity, Id::limits().index) + 1u, typename Skipfield::Allocator(allocator)),
+		Skipfield(std::min(capacity, Id::limits().index) + 1u, allocator),
 		_randomEngine(std::random_device{}()),
 		_capacity(std::min(capacity, Id::limits().index)),
 		_vector(_capacity, allocator),

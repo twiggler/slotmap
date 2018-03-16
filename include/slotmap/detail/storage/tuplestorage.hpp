@@ -43,13 +43,13 @@ public:
 	using TItem = Item<T, IdT>;
 	using TVector = Vector<TItem>;
 	using Index = typename IdT::UInt;
-	using Allocator = typename TVector::allocator_type;
 	using ValueIterator = decltype(makeValueIter(std::declval<TItem*>()));
 	using ConstValueIterator = decltype(makeValueIter(std::declval<const TItem*>()));
 	using FilterIterator = decltype(makeFilterIter(std::declval<TItem*>()));
 	using ConstFilterIterator = decltype(makeFilterIter(std::declval<const TItem*>()));
 
-	explicit TupleStorage(Index capacity, const Allocator& allocator = {}) :
+	template<class Allocator>
+	explicit TupleStorage(Index capacity, const Allocator& allocator) :
 		_vector(capacity, allocator) {}
 
 	IdT& id(Index index) {

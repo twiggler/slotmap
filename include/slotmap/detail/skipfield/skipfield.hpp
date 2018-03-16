@@ -8,11 +8,11 @@ namespace Twig::Container::detail {
 template<class Vector>
 class Skipfield {
 public:
-	using Allocator = typename Vector::allocator_type;
 	using Index = typename Vector::value_type;
 	using const_iterator = typename Vector::const_iterator;
 
-	explicit Skipfield(typename Vector::size_type capacity, const Allocator& allocator = Allocator()) :
+	template<class Allocator>
+	explicit Skipfield(typename Vector::size_type capacity, const Allocator& allocator) :
 		_data(capacity, allocator) { }
 
 	void clear() {

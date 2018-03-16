@@ -93,6 +93,7 @@ public:
 
 	void grow() {
 		_data.push_back(0);
+		_data.resize(_data.capacity());
 	}
 
 	const_iterator begin() const  {

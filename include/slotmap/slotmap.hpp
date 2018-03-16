@@ -127,17 +127,18 @@ public:
 		if (_freeHead < _top) {
 			index = _freeHead;
 			_freeHead = _vector.id(index).index;
-			this->unskip(index);
 		} else {
 			if (_size == _capacity) {
-				if (Resizable && _capacity != Id::limits().index)
-					_capacity = _vector.grow();	// Assume the allocator value-initializes the item.
+				if (Resizable && _capacity != Id::limits().index) {
+					_capacity = _vector.grow();    // Assume the allocator value-initializes the item.
+					this->grow();
+				}
 				else
 					throw OutOfSlots();
 			}
 
 			index = _top++;
-			this->grow();
+			this->unskip(index);
 		}
 
 		auto& id = _vector.id(index);

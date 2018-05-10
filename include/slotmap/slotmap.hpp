@@ -138,9 +138,9 @@ public:
 			}
 
 			index = _top++;
-			this->unskip(index);
 		}
 
+		this->unskip(index);
 		auto& id = _vector.id(index);
 		id = { index, _generation };
 		_size++;

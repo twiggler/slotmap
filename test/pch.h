@@ -6,11 +6,6 @@
 #pragma once
 
 #include "gtest/gtest.h"
-// TODO(me): Workaround for https://github.com/google/googletest/issues/1616 till
-// MS GTest package maintainers update to 1.8.1+.
-namespace testing::internal {
-	inline void PrintTo(std::nullptr_t, ::std::ostream* os) { *os << "(nullptr)"; }
-}  // namespace testing::internal
 
 #include <vector>
 #include <random>

@@ -5,9 +5,9 @@ namespace Twig::Container::detail {
 template<class Vector>
 class NullSkipfield {
 public:
+	using Allocator = typename Vector::allocator_type;
 	using Index = typename Vector::value_type;
 
-	template<class Allocator>
 	explicit NullSkipfield(typename Vector::size_type, const Allocator&) { }
 
 	void clear() { }

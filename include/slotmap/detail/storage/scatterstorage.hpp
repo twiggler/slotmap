@@ -33,16 +33,17 @@ public:
 	using ValueVector = Vector<T>;
 	using IndexVector = Vector<IdT>;
 	using Index = typename IdT::UInt;
+	using Allocator = typename ValueVector::allocator_type;
+	using IndexAllocator = typename IndexVector::allocator_type;
 	using ValueIterator = typename ValueVector::iterator;
 	using ConstValueIterator = typename ValueVector::const_iterator;
 	using ConstIndexIterator = typename IndexVector::const_iterator;
 	using FilterIterator = decltype(makeFilterIter(std::declval<ValueIterator>(), std::declval<ConstIndexIterator>()));
 	using ConstFilterIterator = decltype(makeFilterIter(std::declval<ConstValueIterator>(), std::declval<ConstIndexIterator>()));
 
-	template<class Allocator>
-	explicit ScatterStorage(Index capacity, const Allocator& allocator) :
+	explicit ScatterStorage(Index capacity, const Allocator& allocator = {}) :
 		_values(capacity, allocator),
-		_indices(capacity, allocator) {}
+		_indices(capacity, IndexAllocator{allocator}) {}
 
 	IdT& id(Index index) {
 		return _indices[index];

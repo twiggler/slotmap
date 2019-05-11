@@ -127,6 +127,7 @@ public:
 		if (_freeHead < _top) {
 			index = _freeHead;
 			_freeHead = _vector.id(index).index;
+			 this->unskip(index);
 		} else {
 			if (_size == _capacity) {
 				if (Resizable && _capacity != Id::limits().index) {
@@ -140,7 +141,6 @@ public:
 			index = _top++;
 		}
 
-		this->unskip(index);
 		auto& id = _vector.id(index);
 		id = { index, _generation };
 		_size++;

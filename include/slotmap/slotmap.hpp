@@ -89,14 +89,15 @@ public:
 			 this->unskip(index);
 		} else {
 			if (_size == _capacity) {
-				if (Resizable && _capacity != Id::limits().index)
+				if (Resizable && _capacity != Id::limits().index) {
 					_capacity = _vector.grow();	// Assume the allocator value-initializes the item.
+					this->grow();
+				}
 				else
 					throw OutOfSlots();
 			}
 
 			index = _top++;
-			this->grow();
 		}
 
 		auto& id = _vector.id(index);

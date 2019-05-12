@@ -47,7 +47,7 @@ public:
 
 	void clear() {
 		for (typename Id::UInt elementIndex = 0; elementIndex < _top; elementIndex++)
-			_vector.id(elementIndex).generation = 0;
+			_vector.setId(elementIndex, { 0, 0 });
 
 		Skipfield::clear();
 		_size = 0;
@@ -100,8 +100,7 @@ public:
 			index = _top++;
 		}
 
-		auto& id = _vector.id(index);
-		id = { index, _generation };
+		_vector.setId({ index, _generation });
 		_size++;
 		_generation = std::max(1, (_generation + 1) & Id::limits().generation); // Generation of zero indicates unused item.
 
@@ -123,14 +122,14 @@ public:
 	}
 
 	bool free(T& value) {
-		auto& id = _vector.idByValue(value);
+		auto id = _vector.idByValue(value);
 		if (id.generation == 0)
 			return false;
 
 		auto oldFreeHead = _freeHead;    // Cannot use std::swap because it is illegal to form a reference to a bit field.
 		_freeHead = id.index;
 		this->skip(id.index);
-		id = { oldFreeHead, 0 };
+		_vector.setId(id.index, { oldFreeHead, 0 });
 		_size--;
 
 		return true;

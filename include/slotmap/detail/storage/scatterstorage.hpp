@@ -45,20 +45,20 @@ public:
 		_values(capacity, allocator),
 		_indices(capacity, IndexAllocator{allocator}) {}
 
-	IdT& id(Index index) {
-		return _indices[index];
-	}
-
 	IdT id(Index index) const {
 		return _indices[index];
 	}
 
-	IdT& idByValue(T& value) {
+	IdT idByValue(const T& value) const {
 		return _indices[&value - _values.data()];
 	}
 
-	IdT idByValue(const T& value) const {
-		return _indices[&value - _values.data()];
+	void setId(IdT id) {
+		_indices[id.index] = id;
+	}
+
+	void setId(Index index, IdT id) {
+		_indices[index] = id;
 	}
 
 	T& value(Index index) {

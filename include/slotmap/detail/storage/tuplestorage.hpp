@@ -51,21 +51,21 @@ public:
 
 	explicit TupleStorage(Index capacity, const Allocator& allocator = {}) :
 		_vector(capacity, allocator) {}
-
-	IdT& id(Index index) {
-		return _vector[index].id;
-	}
-
+	
 	IdT id(Index index) const {
 		return _vector[index].id;
 	}
-
-	IdT& idByValue(T& value) {
-		return reinterpret_cast<TItem&>(value).id;
-	}
-
+	
 	IdT idByValue(const T& value) const {
 		return reinterpret_cast<const TItem&>(value).id;
+	}
+
+	void setId(IdT id) {
+		_vector[id.index].id = id;
+	}
+
+	void setId(Index index, IdT id) {
+		_vector[index].id = id;
 	}
 
 	T& value(Index index) {

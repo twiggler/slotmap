@@ -252,7 +252,7 @@ TEST(Slotmap, HandlesCustomAllocator) {
 		SlotmapFlags::SKIPFIELD
 	>;
 	temporary_allocator alloc;
-	TSlotmap slotmap(10, alloc);
+	TSlotmap slotmap(1, 1, alloc);
 	SUCCEED();
 }
 

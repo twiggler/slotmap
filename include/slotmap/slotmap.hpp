@@ -36,17 +36,14 @@ public:
 	using Allocator = typename Storage::Allocator;
 	using Skipfield = typename detail::SelectSkipfield<FastIterable, Vector, IdBits, GenerationBits>::type;
 		
-	explicit Slotmap(decltype(Id::index) capacity, const Allocator& allocator = {}) :
+	explicit Slotmap(decltype(Id::index) capacity, decltype(Id::generation) generation = 1, const Allocator& allocator = {}) :
 		Skipfield(std::min(capacity, Id::limits().index) + 1u, typename Skipfield::Allocator(allocator)),
-		_randomEngine(std::random_device{}()),
-		_capacity(std::min(capacity, Id::limits().index)),
-		_vector(_capacity, allocator),
-		_top(0),
-		_freeHead(Id::limits().index),
-		_size(0)
-	{
-		_sampleGeneration();
-	}
+			_generation(generation),
+			_capacity(std::min(capacity, Id::limits().index)),
+			_vector(_capacity, allocator),
+			_top(0),
+			_freeHead(Id::limits().index),
+			_size(0) {}
 
 	void clear() {
 		for (typename Id::UInt elementIndex = 0; elementIndex < _top; elementIndex++)
@@ -54,7 +51,6 @@ public:
 
 		Skipfield::clear();
 		_size = 0;
-		_sampleGeneration();
 		_top = 0;
 		_freeHead = Id::limits().index; // always smaller than _top, indicates that all free slots are at the tail.
 	}
@@ -170,14 +166,8 @@ private:
 
 	template<class, bool> friend class Filtered;
 
-	void _sampleGeneration() {
-		std::uniform_int_distribution<unsigned long long> _generationDistribution(1, Id::limits().generation);
-		_generation = static_cast<typename Id::UInt>(_generationDistribution(_randomEngine)); // uniform_int_distribution does not support unsigned char
-	}
-
 	UInt _capacity;
 	Storage _vector;
-	std::mt19937 _randomEngine;
 	UInt _generation;
 	UInt _top;
 	UInt _freeHead;

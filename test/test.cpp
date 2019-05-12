@@ -30,31 +30,10 @@ struct Element { // Used in grow test
 template<class TSlotmap, class TOracle>
 void assertSlotmapEqualsOracle(const TSlotmap& slotmap, const TOracle& oracle) {
 	auto transformSlot = [&](const auto& value) { return make_pair(slotmap.id(value), std::cref(value));  };
-	auto isActive = [](const auto& value) { return value.first.generation != 0; };
-	auto isEqual = [](const auto& a, const auto& b) {
-		if (a.first == b.first) { // Assume free slots have id equal to { 0, 0 }
-			if (a.first.generation != 0)
-				return a.second == b.second;
-			else
-				return true;
-		} else
-			return false;
-	};
+	auto isEqual = [](const auto& a, const auto& b) { return a.first == b.first && a.second == b.second; };
+	auto rangedIsEqual = range::equal(make_filtered(slotmap) | adaptors::transformed(transformSlot), oracle, isEqual);
 
-	auto oracleSize = distance(oracle | adaptors::filtered(isActive));
-	auto slotmapSize = static_cast<decltype(oracleSize)>(slotmap.size());
-	EXPECT_EQ(slotmapSize, oracleSize);
-
-	auto slotmapsAreEqual = range::equal(slotmap | adaptors::transformed(transformSlot), oracle, isEqual);
-	EXPECT_TRUE(slotmapsAreEqual);
-	auto rangedIsEqual = range::equal(make_filtered(slotmap) | adaptors::transformed(transformSlot), oracle | adaptors::filtered(isActive), isEqual);
 	EXPECT_TRUE(rangedIsEqual);
-
-	for (auto oracleElement : oracle | adaptors::filtered(isActive)) {
-		const auto* slotmapValue = slotmap.find(oracleElement.first);
-		ASSERT_NE(slotmapValue, nullptr);
-		EXPECT_EQ(oracleElement.second, *slotmapValue);
-	}
 }
 
 template<class TSkipmap, class TOracle>
@@ -80,27 +59,6 @@ void assertSkipmapEqualsOracle(const TSkipmap& skipmap, const TOracle& oracle) {
 			EXPECT_EQ(x++, *nodeIter++);
 		}
 	}
-}
-
-template<class TSlotmap, class TOracle, class T>
-auto insert(TSlotmap& slotmap, TOracle& oracle, T value) {
-	auto id = slotmap.push(value);
-
-	auto element = make_pair(id, value);
-	if (id.index < oracle.size())
-		oracle[id.index] = std::move(element);
-	else
-		oracle.push_back(std::move(element));
-
-	return id;
-}
-
-template<class TSlotmap, class TOracle>
-bool remove(TSlotmap& slotmap, TOracle& oracle, typename TSlotmap::Id id) {
-	auto removedElement = slotmap.free(id);
-	oracle[id.index] = { {0, 0}, typename TSlotmap::value_type{} };
-
-	return removedElement;
 }
 
 TEST(Slotmap, HandlesGenerationCycle) {
@@ -156,19 +114,24 @@ TEST(Slotmap, HandleGrow) {
 		using TSlotmap = decltype(slotmapType)::type;
 		using TId = typename TSlotmap::Id;
 		static_assert(TSlotmap::Scattering != is_same_v<typename TSlotmap::Storage, Twig::Container::detail::TupleStorage<VectorAdapter, typename TSlotmap::value_type, TId>>);
-		using TOracle = vector<pair<TId, Element>>;
 
 		TSlotmap slotmap(4);
-		TOracle oracle;
 		auto initialCapacity = slotmap.capacity();
 
 		auto itemCount = std::uint32_t(0);
 		do {
-			insert(slotmap, oracle, Element{ itemCount++ });
+			slotmap.push(itemCount++);
 		} while (slotmap.size() < slotmap.capacity());
-		insert(slotmap, oracle, itemCount++);
+		slotmap.push(itemCount++);
 		EXPECT_GT(slotmap.capacity(), initialCapacity + 1);
-		assertSlotmapEqualsOracle(slotmap, oracle);
+
+		auto i = std::uint32_t(0);
+		for (auto&& element : slotmap) {
+			auto id = slotmap.id(element);
+			EXPECT_EQ(id.index, i);
+			EXPECT_EQ(element, i);
+			EXPECT_EQ(id.generation, ++i);
+		}
 
 		do {
 			const auto& item = slotmap.alloc();
@@ -206,37 +169,43 @@ TEST(Slotmap, InsertDelete) {
 		static_assert(is_same_v<typename TSlotmap::value_type, const char*> !=
 			is_same_v<typename TSlotmap::Storage, Twig::Container::detail::ScatterStorage<VectorAdapter, typename TSlotmap::value_type, TId>>);
 		TSlotmap slotmap(capacity);
-		using TOracle = vector<pair<TId, typename TSlotmap::value_type>>;
-		TOracle oracle;
-
-		insert(slotmap, oracle, "Roel");
-		assertSlotmapEqualsOracle(slotmap, oracle);
-
-		auto middle = insert(slotmap, oracle, "Holland");
-		assertSlotmapEqualsOracle(slotmap, oracle);
-
-		auto last = insert(slotmap, oracle, "Winter");
-		assertSlotmapEqualsOracle(slotmap, oracle);
-
+		
+		auto idComparison = [](TId a, TId b) { return a.index < b.index; };
+		using TOracle = map<TId, typename TSlotmap::value_type, decltype(idComparison)>;
+		TOracle oracle(idComparison);
 		bool didRemove;
-		didRemove = remove(slotmap, oracle, middle);
-		EXPECT_TRUE(didRemove);
+					   
+		slotmap.push("Roel");
+		oracle[TId{0, 1 }] = "Roel";
 		assertSlotmapEqualsOracle(slotmap, oracle);
 
-		didRemove = remove(slotmap, oracle, middle);
+		auto middle = slotmap.push("Holland");
+		oracle[TId{ 1, 2 }] = "Holland";
+		assertSlotmapEqualsOracle(slotmap, oracle);
+
+		auto last = slotmap.push("Winter");
+		oracle[TId{2, 3 }] = "Winter";
+
+		didRemove = slotmap.free(middle);
+		EXPECT_TRUE(didRemove);
+		oracle.erase(middle);
+		assertSlotmapEqualsOracle(slotmap, oracle);
+
+		didRemove = slotmap.free(middle);
 		EXPECT_FALSE(didRemove);
 		assertSlotmapEqualsOracle(slotmap, oracle);
 
-		auto idGermany = insert(slotmap, oracle, "Germany");
-		EXPECT_EQ(decltype(idGermany.index)(1), idGermany.index);
+		auto idGermany = slotmap.push("Germany");
+		oracle[TId{ 1, 4 }] = "Germany";
 		assertSlotmapEqualsOracle(slotmap, oracle);
 
-		didRemove = remove(slotmap, oracle, last);
+		didRemove = slotmap.free(last);
 		EXPECT_TRUE(didRemove);
+		oracle.erase(last);
 		assertSlotmapEqualsOracle(slotmap, oracle);
 
-		auto idSummer = insert(slotmap, oracle, "Summer");
-		EXPECT_EQ(decltype(idSummer.index)(2), idSummer.index);
+		auto idSummer = slotmap.push("Summer");
+		oracle[TId{ 2, 5 }] = "Summer";
 		assertSlotmapEqualsOracle(slotmap, oracle);
 	};
 

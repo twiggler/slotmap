@@ -10,9 +10,8 @@
 #include <foonathan/memory/temporary_allocator.hpp>
 #include <foonathan/memory/std_allocator.hpp>
 #include <vector>
-#include <random>
+#include <map>
 #include <boost/range/adaptor/transformed.hpp>
-#include <boost/range/adaptor/filtered.hpp>
 #include <boost/range/algorithm/equal.hpp>
 #include <boost/hana/tuple.hpp>
 #include <boost/hana/cartesian_product.hpp>

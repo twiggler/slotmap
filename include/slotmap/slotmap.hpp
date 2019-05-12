@@ -17,42 +17,6 @@ struct SlotmapFlags {
 };
 
 template<class T,
-	unsigned IdBits = sizeof(unsigned) * CHAR_BIT,
-	unsigned GenerationBits = IdBits / 2,
-	unsigned Flags = 0>
-struct NodeSizes {
-	using Id = detail::Id<IdBits, GenerationBits>;
-	using UInt = typename Id::UInt;
-
-	static constexpr auto elementSize() {
-		if (!std::is_standard_layout_v<T> || Flags & SlotmapFlags::SCATTER)
-			return sizeof(T);
-		else
-			return sizeof(detail::Item<T, Id>);
-	}
-
-	static constexpr auto idSize() {
-		return sizeof(Id);
-	}
-
-	static constexpr auto skipnodeSize() {
-		return sizeof(UInt);
-	}
-
-	static constexpr auto elementBlock(UInt capacity) {
-		return capacity * elementSize();
-	}
-
-	static constexpr auto idBlock(UInt capacity) {
-		return capacity * idSize();
-	}
-
-	static constexpr auto skipfieldBlock(UInt capacity) {
-		return (capacity + 1) * skipnodeSize();
-	}
-};
-
-template<class T,
 		 template<class> class Vector,
 		 unsigned IdBits = sizeof(unsigned) * CHAR_BIT,
 		 unsigned GenerationBits = IdBits / 2,
@@ -65,7 +29,6 @@ public:
 	static constexpr auto Scattering = bool(Flags & SlotmapFlags::SCATTER);
 	
 	using value_type = T;
-	using NodeSizes = NodeSizes<T, IdBits, GenerationBits, Flags>;
 	using Id = detail::Id<IdBits, GenerationBits>;
 	using Storage = typename detail::SelectStorage<Vector, T, Id, bool(Flags & SlotmapFlags::SCATTER)>::type;
 	using iterator = typename Storage::ValueIterator;

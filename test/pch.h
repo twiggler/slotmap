@@ -7,6 +7,8 @@
 
 #include "gtest/gtest.h"
 
+#include <foonathan/memory/temporary_allocator.hpp>
+#include <foonathan/memory/std_allocator.hpp>
 #include <vector>
 #include <random>
 #include <boost/range/adaptor/transformed.hpp>

@@ -7,8 +7,15 @@ using namespace std;
 using namespace boost;
 using namespace Twig::Container;
 using namespace hana::literals;
+using namespace foonathan::memory;
 
 template<class T> using VectorAdapter = vector<T>;
+
+template<class RawAllocator>
+struct VectorAllocatorAdapter {
+	template<class T>
+	using VectorAdapter = vector<T, std_allocator<T, RawAllocator>>;
+};
 
 struct Element { // Used in grow test
 	static constexpr auto magic = std::uint32_t(0xFEFEFEFE);
@@ -234,6 +241,19 @@ TEST(Slotmap, InsertDelete) {
 	};
 
 	hana::for_each(slotmapTypes, test);
+}
+
+TEST(Slotmap, HandlesCustomAllocator) {
+	using TSlotmap = Slotmap<
+		uint8_t,
+		VectorAllocatorAdapter<temporary_allocator>::VectorAdapter,
+		2,
+		1,
+		SlotmapFlags::SKIPFIELD
+	>;
+	temporary_allocator alloc;
+	TSlotmap slotmap(10, alloc);
+	SUCCEED();
 }
 
 TEST(Skipfield, HandleSkipAndUnskip) {

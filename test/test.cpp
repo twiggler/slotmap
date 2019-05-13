@@ -101,8 +101,8 @@ TEST(Slotmap, HandleGrow) {
 	constexpr auto FlagTypes = hana::make_tuple(
 		hana::int_c<SlotmapFlags::GROW>,
 		hana::int_c<SlotmapFlags::GROW | SlotmapFlags::SKIPFIELD>,
-		hana::int_c<SlotmapFlags::GROW | SlotmapFlags::SCATTER>,
-		hana::int_c<SlotmapFlags::GROW | SlotmapFlags::SKIPFIELD | SlotmapFlags::SCATTER>
+		hana::int_c<SlotmapFlags::GROW | SlotmapFlags::SEGREGATE>,
+		hana::int_c<SlotmapFlags::GROW | SlotmapFlags::SKIPFIELD | SlotmapFlags::SEGREGATE>
 	);
 
 	auto slotmapTypes = hana::transform(
@@ -113,7 +113,7 @@ TEST(Slotmap, HandleGrow) {
 	auto test = [](auto slotmapType) {
 		using TSlotmap = decltype(slotmapType)::type;
 		using TId = typename TSlotmap::Id;
-		static_assert(TSlotmap::Scattering != is_same_v<typename TSlotmap::Storage, Twig::Container::detail::TupleStorage<VectorAdapter, typename TSlotmap::value_type, TId>>);
+		static_assert(TSlotmap::Segregating != is_same_v<typename TSlotmap::Storage, Twig::Container::detail::AggregateStorage<VectorAdapter, typename TSlotmap::value_type, TId>>);
 
 		TSlotmap slotmap(4);
 		auto initialCapacity = slotmap.capacity();
@@ -167,7 +167,7 @@ TEST(Slotmap, InsertDelete) {
 		using TSlotmap = decltype(slotmapType)::type;
 		using TId = typename TSlotmap::Id;
 		static_assert(is_same_v<typename TSlotmap::value_type, const char*> !=
-			is_same_v<typename TSlotmap::Storage, Twig::Container::detail::ScatterStorage<VectorAdapter, typename TSlotmap::value_type, TId>>);
+			is_same_v<typename TSlotmap::Storage, Twig::Container::detail::SegregateStorage<VectorAdapter, typename TSlotmap::value_type, TId>>);
 		TSlotmap slotmap(capacity);
 		
 		auto idComparison = [](TId a, TId b) { return a.index < b.index; };

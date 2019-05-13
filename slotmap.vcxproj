@@ -122,8 +122,8 @@
     <ClInclude Include="include\slotmap\detail\skipfield\skipfield.hpp" />
     <ClInclude Include="include\slotmap\detail\skipfield\skipiterator.hpp" />
     <ClInclude Include="include\slotmap\detail\slotmap.hpp" />
-    <ClInclude Include="include\slotmap\detail\storage\scatterstorage.hpp" />
-    <ClInclude Include="include\slotmap\detail\storage\tuplestorage.hpp" />
+    <ClInclude Include="include\slotmap\detail\storage\segregate.hpp" />
+    <ClInclude Include="include\slotmap\detail\storage\aggregate.hpp" />
     <ClInclude Include="include\slotmap\filtered.hpp" />
     <ClInclude Include="include\slotmap\slotmap.hpp" />
   </ItemGroup>

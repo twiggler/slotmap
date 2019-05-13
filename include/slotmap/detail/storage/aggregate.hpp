@@ -38,7 +38,7 @@ auto makeValueIter(Iter iter) {
 template<template<class> class Vector,
 	     class T,
 	     class IdT>
-class TupleStorage {
+class AggregateStorage {
 public:
 	using TItem = Item<T, IdT>;
 	using TVector = Vector<TItem>;
@@ -49,7 +49,7 @@ public:
 	using FilterIterator = decltype(makeFilterIter(std::declval<TItem*>()));
 	using ConstFilterIterator = decltype(makeFilterIter(std::declval<const TItem*>()));
 
-	explicit TupleStorage(Index capacity, const Allocator& allocator = {}) :
+	explicit AggregateStorage(Index capacity, const Allocator& allocator = {}) :
 		_vector(capacity, allocator) {}
 	
 	IdT id(Index index) const {

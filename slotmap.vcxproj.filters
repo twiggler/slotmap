@@ -33,12 +33,6 @@
     <ClInclude Include="include\slotmap\detail\slotmap.hpp">
       <Filter>Header Files\detail</Filter>
     </ClInclude>
-    <ClInclude Include="include\slotmap\detail\storage\scatterstorage.hpp">
-      <Filter>Header Files\detail\storage</Filter>
-    </ClInclude>
-    <ClInclude Include="include\slotmap\detail\storage\tuplestorage.hpp">
-      <Filter>Header Files\detail\storage</Filter>
-    </ClInclude>
     <ClInclude Include="include\slotmap\detail\skipfield\nullskipfield.hpp">
       <Filter>Header Files\detail\skipfield</Filter>
     </ClInclude>
@@ -47,6 +41,12 @@
     </ClInclude>
     <ClInclude Include="include\slotmap\detail\skipfield\skipfield.hpp">
       <Filter>Header Files\detail\skipfield</Filter>
+    </ClInclude>
+    <ClInclude Include="include\slotmap\detail\storage\segregate.hpp">
+      <Filter>Header Files\detail\storage</Filter>
+    </ClInclude>
+    <ClInclude Include="include\slotmap\detail\storage\aggregate.hpp">
+      <Filter>Header Files\detail\storage</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

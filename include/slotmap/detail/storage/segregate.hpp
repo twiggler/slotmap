@@ -28,7 +28,7 @@ auto makeFilterIter(ValueIter valueIter, IndexIter indexIter) {
 template<template<class> class Vector,
 		 class T,
 		 class IdT>
-class ScatterStorage {
+class SegregateStorage {
 public:
 	using ValueVector = Vector<T>;
 	using IndexVector = Vector<IdT>;
@@ -41,7 +41,7 @@ public:
 	using FilterIterator = decltype(makeFilterIter(std::declval<ValueIterator>(), std::declval<ConstIndexIterator>()));
 	using ConstFilterIterator = decltype(makeFilterIter(std::declval<ConstValueIterator>(), std::declval<ConstIndexIterator>()));
 
-	explicit ScatterStorage(Index capacity, const Allocator& allocator = {}) :
+	explicit SegregateStorage(Index capacity, const Allocator& allocator = {}) :
 		_values(capacity, allocator),
 		_indices(capacity, IndexAllocator{allocator}) {}
 

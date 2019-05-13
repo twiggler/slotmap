@@ -13,7 +13,7 @@ template<class, bool> class Filtered;
 struct SlotmapFlags {
 	static constexpr auto GROW = 1u;
 	static constexpr auto SKIPFIELD = 1u << 1;
-	static constexpr auto SCATTER = 1u << 2;
+	static constexpr auto SEGREGATE = 1u << 2;
 };
 
 template<class T,
@@ -26,11 +26,11 @@ class Slotmap : detail::SelectSkipfield<bool(Flags & SlotmapFlags::SKIPFIELD), V
 public:
 	static constexpr auto Resizable = bool(Flags & SlotmapFlags::GROW);
 	static constexpr auto FastIterable = bool(Flags & SlotmapFlags::SKIPFIELD);
-	static constexpr auto Scattering = bool(Flags & SlotmapFlags::SCATTER);
+	static constexpr auto Segregating = bool(Flags & SlotmapFlags::SEGREGATE);
 	
 	using value_type = T;
 	using Id = detail::Id<IdBits, GenerationBits>;
-	using Storage = typename detail::SelectStorage<Vector, T, Id, bool(Flags & SlotmapFlags::SCATTER)>::type;
+	using Storage = typename detail::SelectStorage<Vector, T, Id, bool(Flags & SlotmapFlags::SEGREGATE)>::type;
 	using iterator = typename Storage::ValueIterator;
 	using const_iterator = typename Storage::ConstValueIterator;
 	using Allocator = typename Storage::Allocator;

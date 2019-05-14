@@ -38,16 +38,19 @@ public:
 		
 	explicit Slotmap(decltype(Id::index) capacity, decltype(Id::generation) generation = 1, const Allocator& allocator = {}) :
 		Skipfield(std::min(capacity, Id::limits().index) + 1u, typename Skipfield::Allocator(allocator)),
-			_generation(generation),
-			_capacity(std::min(capacity, Id::limits().index)),
-			_vector(_capacity, allocator),
-			_top(0),
-			_freeHead(Id::limits().index),
-			_size(0) {}
+		_generation(generation),
+		_capacity(std::min(capacity, Id::limits().index)),
+		_vector(_capacity, allocator),
+		_top(0),
+		_freeHead(Id::limits().index),
+		_size(0)
+	{
+		assert(( Id{ 1, generation }.valid()) );
+	}
 
 	void clear() {
 		for (typename Id::UInt elementIndex = 0; elementIndex < _top; elementIndex++)
-			_vector.setId(elementIndex, { 0, 0 });
+			_vector.setId(elementIndex, Id::null());
 
 		Skipfield::clear();
 		_size = 0;
@@ -56,20 +59,20 @@ public:
 	}
 
 	T* find(Id id) {
-		assert(id.generation);
+		assert(id.valid());
 
 		return _vector.id(id.index) == id ? &_vector.value(id.index) : nullptr;
 	}
 
 	const T* find(Id id) const {
-		assert(id.generation);
+		assert(id.valid());
 
 		return _vector.id(id.index) == id ? &_vector.value(id.index) : nullptr;
 	}
 
 	Id id(const T& value) const {
 		auto id = _vector.idByValue(value);
-		return id.generation != 0 ? id : Id{ 0, 0 };
+		return id.valid() ? id : Id::null();
 	}
 
 	auto capacity() const {
@@ -102,7 +105,7 @@ public:
 
 		_vector.setId({ index, _generation });
 		_size++;
-		_generation = std::max(1, (_generation + 1) & Id::limits().generation); // Generation of zero indicates unused item.
+		_generation = Id::evolve(_generation);
 
 		return _vector.value(index);
 	}
@@ -123,22 +126,22 @@ public:
 
 	bool free(T& value) {
 		auto id = _vector.idByValue(value);
-		if (id.generation == 0)
+		if (!id.valid())
 			return false;
 
 		auto oldFreeHead = _freeHead;    // Cannot use std::swap because it is illegal to form a reference to a bit field.
 		_freeHead = id.index;
 		this->skip(id.index);
-		_vector.setId(id.index, { oldFreeHead, 0 });
+		_vector.setId(id.index, Id::free(oldFreeHead));
 		_size--;
 
 		return true;
 	}
 
 	bool free(Id id) {
-		assert(id.generation);
+		assert(id.valid());
+		
 		auto value = find(id);
-
 		if (value != nullptr)
 			return free(*value);
 

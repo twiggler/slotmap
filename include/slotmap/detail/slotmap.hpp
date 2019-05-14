@@ -25,6 +25,22 @@ struct Id {
 		return { UInt(-1), UInt(-1) };
 	};
 
+	static constexpr Id null() {
+		return { 0, 0 };
+	}
+
+	static Id free(UInt index) {
+		return { index, 0 };
+	}
+	
+	static UInt evolve(UInt generation) {
+		return std::max(1, (generation + 1) & limits().generation);
+	}
+
+	bool valid() const {
+		return generation != 0;
+	}
+
 	UInt index : IndexBits;
 	UInt generation : GenerationBits;
 };

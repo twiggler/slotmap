@@ -28,7 +28,14 @@ Slotmap requires the Boost header-only libraries `integer` and `iterator`. In ad
 
 # Usage
 All library files reside in `include/slotmap`.
-All classes reside in the nested namespace `Twig::Container`
+All classes reside in the nested namespace `Twig::Container`.
+
+## Gotchas
+1. The destructor of an element is **only** invoked on slotmap destruction.
+Assign objects to allocated slots instead.
+1. The range implemented by the slotmap container also iterates over unallocated slots.  
+Use `make_filtered` to construct a range which skips unallocated slots.
+
 ## Configuration
 `Slotmap<...>` is a class template which requires two template parameters:
 1. `T`, the type to store in the slotmap.

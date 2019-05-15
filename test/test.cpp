@@ -183,7 +183,8 @@ TEST(Slotmap, InsertDelete) {
 		oracle[TId{ 1, 2 }] = "Holland";
 		assertSlotmapEqualsOracle(slotmap, oracle);
 
-		auto last = slotmap.push("Winter");
+		auto& last = slotmap.alloc();
+		last = "Winter";
 		oracle[TId{2, 3 }] = "Winter";
 
 		didRemove = slotmap.free(middle);
@@ -201,7 +202,11 @@ TEST(Slotmap, InsertDelete) {
 
 		didRemove = slotmap.free(last);
 		EXPECT_TRUE(didRemove);
-		oracle.erase(last);
+		oracle.erase(TId{ 2, 3 });
+		assertSlotmapEqualsOracle(slotmap, oracle);
+
+		didRemove = slotmap.free(last);
+		EXPECT_FALSE(didRemove);
 		assertSlotmapEqualsOracle(slotmap, oracle);
 
 		auto idSummer = slotmap.push("Summer");

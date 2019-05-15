@@ -129,23 +129,21 @@ public:
 		if (!id.valid())
 			return false;
 
-		auto oldFreeHead = _freeHead;    // Cannot use std::swap because it is illegal to form a reference to a bit field.
-		_freeHead = id.index;
-		this->skip(id.index);
-		_vector.setId(id.index, Id::free(oldFreeHead));
-		_size--;
+		doFree(id);
 
 		return true;
 	}
 
 	bool free(Id id) {
+		using namespace std::rel_ops;
 		assert(id.valid());
 		
-		auto value = find(id);
-		if (value != nullptr)
-			return free(*value);
+		if (_vector.id(id.index) != id)
+			return false;
 
-		return false;
+		doFree(id);
+
+		return true;
 	}
 
 	iterator begin() {
@@ -166,6 +164,14 @@ public:
 
 private:
 	using UInt = typename Id::UInt;
+
+	void doFree(Id id) {
+		auto oldFreeHead = _freeHead;    // Cannot use std::swap because it is illegal to form a reference to a bit field.
+		_freeHead = id.index;
+		this->skip(id.index);
+		_vector.setId(id.index, Id::free(oldFreeHead));
+		_size--;
+	}
 
 	template<class, bool> friend class Filtered;
 

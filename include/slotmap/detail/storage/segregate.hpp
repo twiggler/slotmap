@@ -10,13 +10,16 @@ namespace Twig::Container::detail {
 
 template<class ValueIter, class IndexIter>
 auto makeFilterIter(ValueIter firstValue, ValueIter lastValue, IndexIter firstIndex, IndexIter lastIndex) {
+	// Convert to function - pointer because lambda cannot be default - constructed.
+	using V = std::pair<typename std::iterator_traits<ValueIter>::reference, typename std::iterator_traits<IndexIter>::reference>;
+	
 	return boost::make_transform_iterator(
 		boost::make_filter_iterator(
-			[](const auto& zip) { return zip.second.generation; },
+			+[](V zip) { return zip.second.valid(); },
 			boost::make_zip_iterator(std::make_pair(firstValue, firstIndex)),
 			boost::make_zip_iterator(std::make_pair(lastValue, lastIndex))
 		),
-		[](const auto& filteredZip) -> auto& { return filteredZip.first; }
+		+[](V filteredZip) -> auto& { return filteredZip.first; }
 	);
 }
 

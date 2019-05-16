@@ -230,6 +230,16 @@ TEST(Slotmap, HandlesCustomAllocator) {
 	SUCCEED();
 }
 
+TEST(Slotmap, HandleIteratorDefaultConstruction) {
+	using AggregateSlotmap = Slotmap<uint8_t, VectorAdapter, 2>;
+	using SegregateSlotmap = Slotmap<string, VectorAdapter, 2>;
+
+	typename AggregateSlotmap::iterator ita;
+	typename Filtered<AggregateSlotmap, false>::iterator fita;
+	typename SegregateSlotmap::iterator its;
+	typename Filtered<SegregateSlotmap, false>::iterator fits;
+}
+
 TEST(Skipfield, HandleSkipAndUnskip) {
 	constexpr auto n = 100u;
 	constexpr auto t = 10000u;

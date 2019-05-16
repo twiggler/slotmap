@@ -13,9 +13,12 @@ struct Item {
 
 template<class Iter>
 auto makeFilterIter(Iter first, Iter last) {
+	// Convert to function - pointer because lambda cannot be default - constructed.
+	using V = typename std::iterator_traits<Iter>::reference;
+	
 	return makeValueIter(
 		boost::iterators::make_filter_iterator(
-			[](const auto& item) { return item.id.generation; },
+			+[](const V item) { return item.id.valid(); },
 			first,
 			last
 		)
@@ -29,9 +32,12 @@ auto makeFilterIter(Iter first) {
 
 template<class Iter>
 auto makeValueIter(Iter iter) {
+	// Convert to function - pointer because lambda cannot be default - constructed.
+	using V = typename std::iterator_traits<Iter>::reference;
+
 	return boost::iterators::make_transform_iterator(
 		iter,
-		[](auto& item) -> auto& { return item.value; }	// Return by reference.
+		+[](V item) -> auto& { return item.value; }	// Return by reference! 
 	);
 }
 

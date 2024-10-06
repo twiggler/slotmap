@@ -1,122 +1,66 @@
 #pragma once
 
-#include <boost/iterator/filter_iterator.hpp>
-#include <boost/iterator/transform_iterator.hpp>
+#include <ranges>
 
 namespace Twig::Container::detail {
 
-template<class T, class IdT>
-struct Item {
-	T value;	// value should be the first field to allow reinterpret_cast from T* to Item* and vice-versa.
-	IdT id;
-};
+    template<class T, class IdT>
+    struct Item {
+        T   value;
+        IdT id;
 
-template<class Iter>
-auto makeFilterIter(Iter first, Iter last) {
-	// Convert to function - pointer because lambda cannot be default - constructed.
-	using V = typename std::iterator_traits<Iter>::reference;
-	
-	return makeValueIter(
-		boost::iterators::make_filter_iterator(
-			+[](const V item) { return item.id.valid(); },
-			first,
-			last
-		)
-	);
-}
+        // value should be the first field to allow reinterpret_cast from T* to Item* and vice-versa.
+        static_assert(offsetof(Item, value) == 0);
+    };
 
-template<class Iter>
-auto makeFilterIter(Iter first) {
-	return makeFilterIter(first, first);
-}
+    template<template<class> class Vector, class T, class IdT>
+    class AggregateStorage {
+    public:
+        using TItem   = Item<T, IdT>;
+        using TVector = Vector<TItem>;
+        using Index   = typename IdT::UInt;
 
-template<class Iter>
-auto makeValueIter(Iter iter) {
-	// Convert to function - pointer because lambda cannot be default - constructed.
-	using V = typename std::iterator_traits<Iter>::reference;
+        explicit AggregateStorage(TVector vector) : _vector(std::move(vector)) {}
 
-	return boost::iterators::make_transform_iterator(
-		iter,
-		+[](V item) -> auto& { return item.value; }	// Return by reference! 
-	);
-}
+        template<class F>
+        static auto make(F vectorFactory, Index capacity) { 
+            auto vector = vectorFactory<T>(capacity);
+            if (!vector) {
+                return vector;
+            }
 
-template<template<class> class Vector,
-	     class T,
-	     class IdT>
-class AggregateStorage {
-public:
-	using TItem = Item<T, IdT>;
-	using TVector = Vector<TItem>;
-	using Index = typename IdT::UInt;
-	using Allocator = typename TVector::allocator_type;
-	using ValueIterator = decltype(makeValueIter(std::declval<TItem*>()));
-	using ConstValueIterator = decltype(makeValueIter(std::declval<const TItem*>()));
-	using FilterIterator = decltype(makeFilterIter(std::declval<TItem*>()));
-	using ConstFilterIterator = decltype(makeFilterIter(std::declval<const TItem*>()));
+            return AggregateStorage(std::move(*vector));
+        }
 
-	explicit AggregateStorage(Index capacity, const Allocator& allocator = {}) :
-		_vector(capacity, allocator) {}
-	
-	IdT id(Index index) const {
-		return _vector[index].id;
-	}
-	
-	IdT idByValue(const T& value) const {
-		return reinterpret_cast<const TItem&>(value).id;
-	}
+        IdT id(Index index) const { return _vector[index].id; }
 
-	void setId(IdT id) {
-		_vector[id.index].id = id;
-	}
+        IdT idByValue(const T& value) const { return reinterpret_cast<const TItem&>(value).id; }
 
-	void setId(Index index, IdT id) {
-		_vector[index].id = id;
-	}
+        void setId(IdT id) { _vector[id.index].id = id; }
 
-	T& value(Index index) {
-		return _vector[index].value;
-	}
+        void setId(Index index, IdT id) { _vector[index].id = id; }
 
-	const T& value(Index index) const {
-		return _vector[index].value;
-	}
+        T& value(Index index) { return _vector[index].value; }
 
-	Index grow() {
-		_vector.emplace_back();
-		auto capacity = Index(std::min(_vector.capacity(), std::size_t(IdT::limits().index)));
-		_vector.resize(capacity);
-		return capacity;
-	}
+        const T& value(Index index) const { return _vector[index].value; }
 
-	ValueIterator begin() {
-		return makeValueIter(_vector.data());
-	}
+        Index grow()
+        {
+            // TODO: Implement grow in a way that is compatible with multiple possible container types
+            return capacity;
+        }
 
-	ConstValueIterator begin() const {
-		return makeValueIter(_vector.data());
-	}
+        auto range()
+        {
+            return std::ranges::transform_view(_vector, [](auto& iter) {
+                return std::tuple(std::ref(iter.value), std::cref(iter.id));
+            });
+        }
 
-	FilterIterator beginFilter(Index top) {
-		return makeFilterIter(_vector.data(), _vector.data() + top);
-	}
+    private:
+        static_assert(std::is_standard_layout_v<T> && offsetof(TItem, value) == 0);
 
-	FilterIterator endFilter(Index top) {
-		return makeFilterIter(_vector.data() + top);
-	}
+        TVector _vector;
+    };
 
-	ConstFilterIterator beginFilter(Index top) const {
-		return makeFilterIter(_vector.data(), _vector.data() + top);
-	}
-
-	ConstFilterIterator endFilter(Index top) const {
-		return makeFilterIter(_vector.data() + top);
-	}
-
-private:
-	static_assert(std::is_standard_layout_v<T> && offsetof(TItem, value) == 0);
-
-	TVector _vector;
-};
-
-}
+} // namespace Twig::Container::detail

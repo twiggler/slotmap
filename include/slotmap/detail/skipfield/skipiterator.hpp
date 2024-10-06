@@ -1,55 +1,80 @@
 #pragma once
 
-#include <boost/iterator/iterator_adaptor.hpp>
-
 namespace Twig::Container::detail {
 
 template<class NodeIter, class SkipfieldIter>
-class SkipIterator : public boost::iterator_adaptor<
-	SkipIterator<NodeIter, SkipfieldIter>,
-	NodeIter,
-	boost::use_default,
-	boost::bidirectional_traversal_tag>
-{
+class SkipIterator {
 public:
-	SkipIterator() = default;
+    using value_type        = typename std::iterator_traits<NodeIter>::value_type;
+    using difference_type   = typename std::iterator_traits<NodeIter>::difference_type;
+    using iterator_category = std::bidirectional_iterator_tag;
 
-	explicit SkipIterator(NodeIter node, SkipfieldIter skipfieldNode) :
-		SkipIterator::iterator_adaptor(node),
-		_skipfieldNode(skipfieldNode)
-	{
-		auto skipCount = *skipfieldNode;
-		_skipfieldNode += skipCount;
-		this->base_reference() += skipCount;
-	}
+    SkipIterator() = default;
 
-	template<class OtherIter>
-	SkipIterator(const SkipIterator<OtherIter, SkipfieldIter>& other) :
-		SkipIterator::iterator_adaptor(other.base()),
-		_skipfieldNode(other._skipfieldNode) { }
+    explicit SkipIterator(NodeIter node, SkipfieldIter skipfieldNode)
+        : _node(node), _skipfieldNode(skipfieldNode) {
+        advance();
+    }
+
+    template<class OtherIter>
+    SkipIterator(const SkipIterator<OtherIter, SkipfieldIter>& other)
+        : _node(other._node), _skipfieldNode(other._skipfieldNode) {}
+
+    reference operator*() const {
+        return *_node;
+    }
+
+    pointer operator->() const {
+        return &(*_node);
+    }
+
+    SkipIterator& operator++() {
+        ++_skipfieldNode;
+        advance();
+        return *this;
+    }
+
+    SkipIterator operator++(int) {
+        SkipIterator tmp = *this;
+        ++(*this);
+        return tmp;
+    }
+
+    SkipIterator& operator--() {
+        --_skipfieldNode;
+        retreat();
+        return *this;
+    }
+
+    SkipIterator operator--(int) {
+        SkipIterator tmp = *this;
+        --(*this);
+        return tmp;
+    }
+
+    bool operator==(const SkipIterator& rhs) const {
+        return _node == rhs._node;
+    }
+
+    bool operator!=(const SkipIterator& rhs) const {
+        return !(*this == rhs);
+    }
 
 private:
-	friend class boost::iterator_core_access;
-	template<class, class> friend class SkipIterator;
+    void advance() {
+        auto skipCount = *_skipfieldNode;
+        _skipfieldNode += skipCount;
+        _node += skipCount + 1;
+    }
 
-	void increment() {
-		auto skipCount = *(++_skipfieldNode);
-		_skipfieldNode += skipCount;
-		this->base_reference() += skipCount + 1;
-	}
+    void retreat() {
+        auto skipCount = *_skipfieldNode;
+        _skipfieldNode -= skipCount;
+        _node -= skipCount - 1;
+    }
 
-	void decrement() {
-		auto skipCount = *(--_skipfieldNode);
-		_skipfieldNode -= skipCount;
-		this->base_reference() -= skipCount - 1;
-	}
-
-	SkipfieldIter _skipfieldNode;
+    NodeIter _node;
+    SkipfieldIter _skipfieldNode;
 };
-
-template<class NodeIter, class SkipfieldIter>
-auto make_skip_iter(NodeIter nodeIter, SkipfieldIter skipfieldIter) {
-	return SkipIterator<NodeIter, SkipfieldIter>{nodeIter, skipfieldIter};
-}
 
 }

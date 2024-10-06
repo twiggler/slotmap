@@ -1,186 +1,259 @@
 #pragma once
 
 #include "detail/slotmap.hpp"
+#include "detail/storage/aggregate.hpp"
+#include "detail/storage/segregate.hpp"
+#include "detail/skipfield/skipfield.hpp"
 #include <random>
+#include <expected>
 #include <cassert>
 
 namespace Twig::Container {
 
-using detail::OutOfSlots;
+    using detail::OutOfSlots;
 
-template<class, bool> class Filtered;
+    template<class, bool>
+    class Filtered;
 
-struct SlotmapFlags {
-	static constexpr auto GROW = 1u;
-	static constexpr auto SKIPFIELD = 1u << 1;
-	static constexpr auto SEGREGATE = 1u << 2;
-};
+    struct SlotmapFlags {
+        static constexpr auto GROW      = 1u;
+        static constexpr auto SKIPFIELD = 1u << 1;
+        static constexpr auto SEGREGATE = 1u << 2;
+    };
 
-template<class T,
-		 template<class> class Vector,
-		 unsigned IdBits = sizeof(unsigned) * CHAR_BIT,
-		 unsigned GenerationBits = IdBits / 2,
-		 unsigned Flags = 0>
-class Slotmap : detail::SelectSkipfield<bool(Flags & SlotmapFlags::SKIPFIELD), Vector, IdBits, GenerationBits>::type
-{
-public:
-	static constexpr auto Resizable = bool(Flags & SlotmapFlags::GROW);
-	static constexpr auto FastIterable = bool(Flags & SlotmapFlags::SKIPFIELD);
-	static constexpr auto Segregating = bool(Flags & SlotmapFlags::SEGREGATE);
-	
-	using value_type = T;
-	using Id = detail::Id<IdBits, GenerationBits>;
-	using Storage = typename detail::SelectStorage<Vector, T, Id, bool(Flags & SlotmapFlags::SEGREGATE)>::type;
-	using iterator = typename Storage::ValueIterator;
-	using const_iterator = typename Storage::ConstValueIterator;
-	using Allocator = typename Storage::Allocator;
-	using Skipfield = typename detail::SelectSkipfield<FastIterable, Vector, IdBits, GenerationBits>::type;
-		
-	explicit Slotmap(decltype(Id::index) capacity, decltype(Id::generation) generation = 1, const Allocator& allocator = {}) :
-		Skipfield(std::min(capacity, Id::limits().index) + 1u, typename Skipfield::Allocator(allocator)),
-		_generation(generation),
-		_capacity(std::min(capacity, Id::limits().index)),
-		_vector(_capacity, allocator),
-		_top(0),
-		_freeHead(Id::limits().index),
-		_size(0)
-	{
-		assert(( Id{ 1, generation }.valid()) );
-	}
+    template<
+        class T,
+        template<class>
+        class Vector,
+        unsigned IdBits         = sizeof(unsigned) * CHAR_BIT,
+        unsigned GenerationBits = IdBits / 2,
+        unsigned Flags          = 0,
+        bool     UseExceptions  = true>
+    class Slotmap {
+    public:
+        using value_type = T;
+        using Id         = detail::Id<IdBits, GenerationBits>;
+        using Storage    = std::conditional_t<
+               !hasStandardLayout || Scatter,
+               SegregateStorage<Vector, T, IdT>,
+               AggregateStorage<Vector, T, IdT>>;
 
-	void clear() {
-		for (typename Id::UInt elementIndex = 0; elementIndex < _top; elementIndex++)
-			_vector.setId(elementIndex, Id::null());
+        using Allocator = typename Storage::Allocator;
 
-		Skipfield::clear();
-		_size = 0;
-		_top = 0;
-		_freeHead = Id::limits().index; // always smaller than _top, indicates that all free slots are at the tail.
-	}
+        explicit Slotmap(
+            decltype(Id::index) capacity, decltype(Id::generation) generation = 1, const Allocator& allocator = {}
+        )
+        requires(UseExceptions)
+            :
+            skipfield(std::min(capacity, Id::limits().index) + 1u, typename Skipfield::Allocator(allocator)),
+            _generation(generation),
+            _capacity(std::min(capacity, Id::limits().index)),
+            storage(_capacity, allocator),
+            _top(0),
+            _freeHead(Id::limits().index),
+            _size(0)
+        {
+            assert((Id{1, generation}.valid()));
+        }
 
-	T* find(Id id) {
-		assert(id.valid());
+        Slotmap(
+            decltype(Id::index) capacity, decltype(Id::generation) generation = 1, Storage storage, SkipfieldT skipfield
+        ) :
+            storage(std::move(storage)),
+            skipfield(std::move(skipfield)),
+            _capacity(std::min(capacity, Id::limits().index)),
+            _generation(generation),
+            _top(0),
+            _freeHead(Id::limits().index),
+            _size(0)
+        {
+            assert((Id{1, generation}.valid()));
+        }
 
-		return _vector.id(id.index) == id ? &_vector.value(id.index) : nullptr;
-	}
+        template<class F>
+        static auto make(F storageFactory, decltype(Id::index) capacity, decltype(Id::generation) generation = 1)
+        {
+            auto storage = Storage::make(capacity);
+            if (!storage) {
+                return storage;
+            }
 
-	const T* find(Id id) const {
-		assert(id.valid());
 
-		return _vector.id(id.index) == id ? &_vector.value(id.index) : nullptr;
-	}
+            if (constexpr !(Flags & SlotmapFlags::SKIPFIELD)) {
+                return Slotmap(capacity, generation, std::move(*storage), EmptySkipfield{});
+            }
 
-	Id id(const T& value) const {
-		auto id = _vector.idByValue(value);
-		return id.valid() ? id : Id::null();
-	}
+            auto skipfield = SkipfieldT::make(storageFactory, capacity);
+            if (!skipfield) {
+                return skipfield;
+            }
 
-	auto capacity() const {
-		return _capacity;
-	}
+            return Slotmap(capacity, generation, std::move(*storage), std::move(*skipfield));
+        }
 
-	auto size() const {
-		return _size;
-	}
+        void clear()
+        {
+            for (typename Id::UInt elementIndex = 0; elementIndex < _top; elementIndex++)
+                storage.setId(elementIndex, Id::null());
 
-	T& alloc() {
-		typename Id::UInt index;
+            Skipfield::clear();
+            _size     = 0;
+            _top      = 0;
+            _freeHead = Id::limits().index; // always smaller than _top, indicates that all free slots are at the tail.
+        }
 
-		if (_freeHead < _top) {
-			index = _freeHead;
-			_freeHead = _vector.id(index).index;
-			 this->unskip(index);
-		} else {
-			if (_size == _capacity) {
-				if (Resizable && _capacity != Id::limits().index) {
-					_capacity = _vector.grow();	// Assume the allocator value-initializes the item.
-					this->grow();
-				}
-				else
-					throw OutOfSlots();
-			}
+        T* find(Id id)
+        {
+            assert(id.valid());
 
-			index = _top++;
-		}
+            return storage.id(id.index) == id ? &storage.value(id.index) : nullptr;
+        }
 
-		_vector.setId({ index, _generation });
-		_size++;
-		_generation = Id::evolve(_generation);
+        const T* find(Id id) const
+        {
+            assert(id.valid());
 
-		return _vector.value(index);
-	}
+            return storage.id(id.index) == id ? &storage.value(id.index) : nullptr;
+        }
 
-	Id push(const T& value) {
-		auto& slot = alloc();
-		slot = value;
+        Id id(const T& value) const
+        {
+            auto id = storage.idByValue(value);
+            return id.valid() ? id : Id::null();
+        }
 
-		return id(slot);
-	}
+        auto capacity() const { return _capacity; }
 
-	Id push(T&& value) {
-		auto& slot = alloc();
-		slot = std::move(value);
+        auto size() const { return _size; }
 
-		return id(slot);
-	}
+        T* alloc()
+        {
+            typename Id::UInt index;
 
-	bool free(T& value) {
-		auto id = _vector.idByValue(value);
-		if (!id.valid())
-			return false;
+            if (_freeHead < _top) {
+                index     = _freeHead;
+                _freeHead = storage.id(index).index;
+                this->unskip(index);
+            } else {
+                if (_size == _capacity) {
+                    if (flags & SlotmapFlags::GROW && _capacity != Id::limits().index) {
+                        _capacity = storage.grow(); // Assume the allocator value-initializes the item.
+                        this->grow();
+                    } else {
+                        if constexpr (UseExceptions) {
+                            throw OutOfSlots();
+                        } else {
+                            return nullptr
+                        }
+                    }
+                }
 
-		doFree(id);
+                index = _top++;
+            }
 
-		return true;
-	}
+            storage.setId({index, _generation});
+            _size++;
+            _generation = Id::evolve(_generation);
 
-	bool free(Id id) {
-		using namespace std::rel_ops;
-		assert(id.valid());
-		
-		if (_vector.id(id.index) != id)
-			return false;
+            return &storage.value(index);
+        }
 
-		doFree(id);
+        Id push(const T& value)
+        {
+            auto& slot = alloc();
+            slot       = value;
 
-		return true;
-	}
+            return id(slot);
+        }
 
-	iterator begin() {
-		return _vector.begin();
-	}
+        Id push(T&& value)
+        {
+            auto& slot = alloc();
+            slot       = std::move(value);
 
-	iterator end() {
-		return std::next(_vector.begin(), _top);
-	}
+            return id(slot);
+        }
 
-	const_iterator begin() const {
-		return _vector.begin();
-	}
+        bool free(T& value)
+        {
+            auto id = storage.idByValue(value);
+            if (!id.valid())
+                return false;
 
-	const_iterator end() const {
-		return std::next(_vector.begin(), _top);
-	}
+            doFree(id);
+
+            return true;
+        }
+
+        bool free(Id id)
+        {
+            using namespace std::rel_ops;
+            assert(id.valid());
+
+            if (storage.id(id.index) != id)
+                return false;
+
+            doFree(id);
+
+            return true;
+        }
+
+        auto begin() { return storage.range().begin(); }
+
+        auto end() { return storage.range().end(); }
+
+    private:
+        struct EmptySkipfield {
+            constexpr EmptySkipfield(auto&&...) {};
+        };
+
+        using UInt = typename Id::UInt;
+        using SkipFieldT =
+            std::conditional_t<Flags & SlotmapFlags::SKIPFIELD, detail::Skipfield<Vector, UInt>, EmptySkipfield>;
+
+        void doFree(Id id)
+        {
+            auto oldFreeHead =
+                _freeHead; // Cannot use std::swap because it is illegal to form a reference to a bit field.
+            _freeHead = id.index;
+            this->skip(id.index);
+            storage.setId(id.index, Id::free(oldFreeHead));
+            _size--;
+        }
+
+
+        UInt                             _capacity;
+        Storage                          storage;
+        UInt                             _generation;
+        UInt                             _top;
+        UInt                             _freeHead;
+        UInt                             _size;
+        [[no_unique_address]] SkipfieldT skipfield;
+    };
+
+} // namespace Twig::Container
+
+template<
+    class T,
+    template<class>
+    class Vector,
+    unsigned IdBits         = sizeof(unsigned) * CHAR_BIT,
+    unsigned GenerationBits = IdBits / 2,
+    unsigned Flags          = 0,
+    bool     UseExceptions  = true>
+class Filtered : public std::ranges::view_interface<Filtered<T, Vector, IdBits, GenerationBits, Flags, UseExceptions>> {
+    explicit Filtered(Slotmap<T, Vector, IdBits, GenerationBits, Flags, UseExceptions>& slotmap) : slotmap(&slotmap) {}
+
+    auto range()
+    {
+        return std::ranges::filter(slotmap, [](auto& item) { return std::get<1>(item).valid() });
+    }
+
+    auto begin() { return range().begin(); }
+
+    auto end() { return range().end(); }
+
 
 private:
-	using UInt = typename Id::UInt;
-
-	void doFree(Id id) {
-		auto oldFreeHead = _freeHead;    // Cannot use std::swap because it is illegal to form a reference to a bit field.
-		_freeHead = id.index;
-		this->skip(id.index);
-		_vector.setId(id.index, Id::free(oldFreeHead));
-		_size--;
-	}
-
-	template<class, bool> friend class Filtered;
-
-	UInt _capacity;
-	Storage _vector;
-	UInt _generation;
-	UInt _top;
-	UInt _freeHead;
-	UInt _size;
+    Slotmap<T, Vector, IdBits, GenerationBits, Flags, UseExceptions>* slotmap;
 };
-
-}

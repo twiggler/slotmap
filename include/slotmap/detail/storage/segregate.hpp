@@ -1,114 +1,152 @@
 #pragma once
 
-#include <boost/fusion/adapted/std_pair.hpp>
-#include <boost/iterator/zip_iterator.hpp>
-#include <boost/iterator/transform_iterator.hpp>
-#include <boost/iterator/filter_iterator.hpp>
 #include <memory>
+#include <ranges>
 
 namespace Twig::Container::detail {
 
-template<class ValueIter, class IndexIter>
-auto makeFilterIter(ValueIter firstValue, ValueIter lastValue, IndexIter firstIndex, IndexIter lastIndex) {
-	// Convert to function - pointer because lambda cannot be default - constructed.
-	using V = std::pair<typename std::iterator_traits<ValueIter>::reference, typename std::iterator_traits<IndexIter>::reference>;
-	
-	return boost::make_transform_iterator(
-		boost::make_filter_iterator(
-			+[](V zip) { return zip.second.valid(); },
-			boost::make_zip_iterator(std::make_pair(firstValue, firstIndex)),
-			boost::make_zip_iterator(std::make_pair(lastValue, lastIndex))
-		),
-		+[](V filteredZip) -> auto& { return filteredZip.first; }
-	);
-}
+    template<class ValueIter, class IndexIter>
+    auto makeFilterIter(ValueIter firstValue, ValueIter lastValue, IndexIter firstIndex, IndexIter lastIndex)
+    {
+        // Convert to function - pointer because lambda cannot be default - constructed.
+        using V = std::pair<
+            typename std::iterator_traits<ValueIter>::reference,
+            typename std::iterator_traits<IndexIter>::reference>;
 
-template<class ValueIter, class IndexIter>
-auto makeFilterIter(ValueIter valueIter, IndexIter indexIter) {
-	return makeFilterIter(valueIter, valueIter, indexIter, indexIter);
-}
+        return boost::make_transform_iterator(
+            boost::make_filter_iterator(
+                +[](V zip) { return zip.second.valid(); },
+                boost::make_zip_iterator(std::make_pair(firstValue, firstIndex)),
+                boost::make_zip_iterator(std::make_pair(lastValue, lastIndex))
+            ),
+            +[](V filteredZip) -> auto& { return filteredZip.first; }
+        );
+    }
 
-template<template<class> class Vector,
-		 class T,
-		 class IdT>
-class SegregateStorage {
-public:
-	using ValueVector = Vector<T>;
-	using IndexVector = Vector<IdT>;
-	using Index = typename IdT::UInt;
-	using Allocator = typename ValueVector::allocator_type;
-	using IndexAllocator = typename IndexVector::allocator_type;
-	using ValueIterator = typename ValueVector::iterator;
-	using ConstValueIterator = typename ValueVector::const_iterator;
-	using ConstIndexIterator = typename IndexVector::const_iterator;
-	using FilterIterator = decltype(makeFilterIter(std::declval<ValueIterator>(), std::declval<ConstIndexIterator>()));
-	using ConstFilterIterator = decltype(makeFilterIter(std::declval<ConstValueIterator>(), std::declval<ConstIndexIterator>()));
+    template<class ValueIter, class IndexIter>
+    auto makeFilterIter(ValueIter valueIter, IndexIter indexIter)
+    {
+        return makeFilterIter(valueIter, valueIter, indexIter, indexIter);
+    }
 
-	explicit SegregateStorage(Index capacity, const Allocator& allocator = {}) :
-		_values(capacity, allocator),
-		_indices(capacity, IndexAllocator{allocator}) {}
+    template<template<class> class Vector, class T, class IdT>
+    class SegregateStorage {
+    public:
+        using ValueVector = Vector<T>;
+        using IndexVector = Vector<IdT>;
+        using Index       = typename IdT::UInt;
 
-	IdT id(Index index) const {
-		return _indices[index];
-	}
+        SegregateStorage(ValueVector values, IndexVector indices) :
+            _values(std::move(values)), _indices(std::move(indices))
+        {}
 
-	IdT idByValue(const T& value) const {
-		return _indices[&value - _values.data()];
-	}
+        template<class F>
+		static auto make(F vectorFactory, Index capacity)
+		{
+			auto values = vectorFactory<T>(capacity);
+			if (!values) {
+				return values;
+			}
 
-	void setId(IdT id) {
-		_indices[id.index] = id;
-	}
+			auto indices = vectorFactory<Index>(capacity);
+			if (!indices) {
+				return indices;
+			}
 
-	void setId(Index index, IdT id) {
-		_indices[index] = id;
-	}
+			return SegregateStorage(std::move(*values), std::move(*indices));
+		}
 
-	T& value(Index index) {
-		return _values[index];
-	}
+		IdT id(Index index) const { return _indices[index]; }
 
-	const T& value(Index index) const {
-		return _values[index];
-	}
+		IdT idByValue(const T& value) const { return _indices[&value - _values.data()]; }
 
-	Index grow() {
-		_values.emplace_back();
-		_values.resize(_values.capacity());
-		_indices.resize(_values.capacity());
-		auto capacity = Index(std::min(_values.capacity(), std::size_t(IdT::limits().index)));
-		return capacity;
-	}
+		void setId(IdT id) { _indices[id.index] = id; }
 
-	ValueIterator begin() {
-		return _values.begin();
-	}
+		void setId(Index index, IdT id) { _indices[index] = id; }
 
-	ConstValueIterator begin() const {
-		return _values.begin();
-	}
+		T& value(Index index) { return _values[index]; }
 
-	FilterIterator beginFilter(Index top) {
-		return makeFilterIter(_values.begin(), std::next(_values.begin(), top), 
-							   _indices.begin(), std::next(_indices.begin(), top));
-	}
+		const T& value(Index index) const { return _values[index]; }
 
-	FilterIterator endFilter(Index top) {
-		return makeFilterIter(std::next(_values.begin(), top), std::next(_indices.begin(), top));
-	}
+		Index grow()
+		{
+            // TODO: Implement grow in a way that is compatible with multiple possible container types
+			
+			return capacity;
+		}
 
-	ConstFilterIterator beginFilter(Index top) const {
-		return makeFilterIter(_values.begin(), std::next(_values.begin(), top),
-							   _indices.begin(), std::next(_indices.begin(), top));
-	}
+		auto range()
+		{
+			return std::ranges::transform_view(
+				makeFilterIter(_values.begin(), _values.end(), _indices.begin(), _indices.end()),
+				[](auto& value) { return std::ref(value); }
+			);
+		}
 
-	ConstFilterIterator endFilter(Index top) const {
-		return makeFilterIter(std::next(_values.begin(), top), std::next(_indices.begin(), top));
-	}
+	private:
+		ValueVector _values;
+		IndexVector _indices;
+	};
 
-private:
-	ValueVector _values;
-	IndexVector _indices;
-};
+	template<template<class> class Vector, class T, class IdT>
+	class AggregateStorage {
+	public:
+		using ValueVector = Vector<T>;
+		using IndexVector = Vector<IdT>;
+		using Index       = typename IdT::UInt;
+		using IndexAllocator = typename IndexVector::allocator_type;
 
-}
+		AggregateStorage(Index capacity, const IndexAllocator& allocator) :
+			_values(capacity, allocator), _indices(capacity, IndexAllocator{allocator}) {}
+
+		template<class F>
+		static auto make(F vectorFactory, Index capacity)
+		{
+			auto values = vectorFactory(capacity);
+			if (!values) {
+				return values;
+			}
+
+			auto indices = vectorFactory(capacity);
+			if (!indices) {
+				return indices;
+			}
+
+			return AggregateStorage(std::move(*values), std::move(*indices));
+		}
+
+		IdT id(Index index) const { return _indices[index]; }
+
+		Id
+		_values(capacity, allocator), _indices(capacity, IndexAllocator{allocator}) {}
+
+        IdT id(Index index) const { return _indices[index]; }
+
+        IdT idByValue(const T& value) const { return _indices[&value - _values.data()]; }
+
+        void setId(IdT id) { _indices[id.index] = id; }
+
+        void setId(Index index, IdT id) { _indices[index] = id; }
+
+        T& value(Index index) { return _values[index]; }
+
+        const T& value(Index index) const { return _values[index]; }
+
+        Index grow()
+        {
+            _values.emplace_back();
+            _values.resize(_values.capacity());
+            _indices.resize(_values.capacity());
+            auto capacity = Index(std::min(_values.capacity(), std::size_t(IdT::limits().index)));
+            return capacity;
+        }
+
+        auto range() { return std::ranges::zip_view(_values, static_cast<const IndexVector&>(_indices)); }
+
+    private:
+        ValueVector _values;
+        IndexVector _indices;
+    };
+
+
+} // namespace Twig::Container::detail

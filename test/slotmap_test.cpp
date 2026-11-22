@@ -33,7 +33,10 @@ using TestSlotmap = Slotmap<T, std::vector, 32, 16, Flags>;
 using SlotmapTypes =
 	::testing::Types<TestSlotmap<int, 0>, TestSlotmap<int, SlotmapFlags::SKIPFIELD>, TestSlotmap<int, SlotmapFlags::SEGREGATE>,
 					 TestSlotmap<int, SlotmapFlags::SKIPFIELD | SlotmapFlags::SEGREGATE>, TestSlotmap<std::string, 0>,
-					 TestSlotmap<std::string, SlotmapFlags::SKIPFIELD>>;
+					 TestSlotmap<std::string, SlotmapFlags::SKIPFIELD>,
+					 // Wide ids: 32- and 64-bit skipfield entries, which are not promoted to int.
+					 Slotmap<int, std::vector, 64, 32, SlotmapFlags::SKIPFIELD>,
+					 Slotmap<int, std::vector, 96, 32, SlotmapFlags::SKIPFIELD>>;
 
 template<class TSlotmap>
 class SlotmapTest : public ::testing::Test {};

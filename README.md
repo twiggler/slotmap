@@ -36,28 +36,8 @@ target_link_libraries(my_game PRIVATE slotmap::slotmap)
 ```
 Or install it (`cmake --install`) and use `find_package(slotmap REQUIRED)` with the same `slotmap::slotmap` target.
 
-## Development
-Builds use CMake presets: `cmake --workflow --preset <name>` configures, builds and tests in Debug and Release.
-Presets: `gcc`, `clang`, `clang-libcxx`, `msvc`, `asan` (AddressSanitizer and UndefinedBehaviorSanitizer) and `tidy` (clang-tidy).
-Visual Studio, VS Code (CMake Tools) and CLion pick up the presets directly.
-
-The [dev container](.devcontainer) has every toolchain the presets need, so nothing has to be installed on the host:
-- **VS Code:** "Dev Containers: Reopen in Container". With podman, set the user setting `"dev.containers.dockerPath": "podman"`.
-- **Command line:**
-  ```sh
-  podman build -t slotmap-dev .devcontainer
-  podman run --rm --userns=keep-id --security-opt label=disable -v "$PWD":"$PWD" -w "$PWD" slotmap-dev cmake --workflow --preset gcc
-  ```
-
-Formatting follows `.clang-format` (checked in CI); `.clang-tidy` is the linter.
-
-### Claude Code in the dev container
-The container keeps its own Claude Code configuration (login, settings) in a named volume, and sees only this project's session folder from the host (`~/.claude/projects/<project>`).
-The workspace is mounted at the same path as on the host, because Claude Code keys sessions by path, so sessions and project memory carry over in both directions.
-Host credentials, settings, hooks, skills and other projects are never mounted.
-
-Code running in the container can still read and change this project's sessions and memory, which the host's Claude Code later reads; it could already change the workspace itself.
-Treat the container as a reproducible toolchain, not as a sandbox for untrusted code.
+## Contributing
+See [CONTRIBUTING.md](CONTRIBUTING.md) to build, test and work in the dev container.
 
 # Usage
 All library files reside in `include/slotmap`.

@@ -1,0 +1,56 @@
+# Inferred from the existing sources by minimizing the diff clang-format produces on them: tabs (4 wide),
+# attached braces, constructor initializers broken after the colon, `T&`/`T*` attached to the type,
+# `template<` without a space, lines up to ~140 columns.
+Language: Cpp
+BasedOnStyle: LLVM
+Standard: Latest
+
+UseTab: ForContinuationAndIndentation
+IndentWidth: 4
+TabWidth: 4
+ContinuationIndentWidth: 4
+ConstructorInitializerIndentWidth: 4
+ColumnLimit: 140
+
+AccessModifierOffset: -4
+NamespaceIndentation: None
+FixNamespaceComments: false
+IndentCaseLabels: true
+IndentCaseBlocks: true
+
+BreakBeforeBraces: Custom
+BraceWrapping:
+  AfterCaseLabel: true
+  AfterClass: false
+  AfterControlStatement: Never
+  AfterEnum: false
+  AfterFunction: false
+  AfterNamespace: false
+  AfterStruct: false
+  AfterUnion: false
+  BeforeCatch: false
+  BeforeElse: false
+  BeforeLambdaBody: false
+  BeforeWhile: false
+  SplitEmptyFunction: false
+  SplitEmptyRecord: false
+
+PointerAlignment: Left
+DerivePointerAlignment: false
+SpaceAfterTemplateKeyword: false
+BreakTemplateDeclarations: Leave
+BreakConstructorInitializers: AfterColon
+PackConstructorInitializers: Never
+AlignAfterOpenBracket: Align
+Cpp11BracedListStyle: false
+
+AllowShortFunctionsOnASingleLine: Empty
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLoopsOnASingleLine: false
+AllowShortBlocksOnASingleLine: Never
+AllowShortCaseLabelsOnASingleLine: false
+AllowShortLambdasOnASingleLine: All
+
+SortIncludes: Never
+MaxEmptyLinesToKeep: 1
+InsertNewlineAtEOF: true

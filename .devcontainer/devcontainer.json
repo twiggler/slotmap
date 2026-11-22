@@ -1,0 +1,53 @@
+// Dev container for slotmap (podman on Linux; set the VS Code user setting
+// "dev.containers.dockerPath": "podman").
+//
+// Claude Code: the container keeps its own Claude config (login, settings) in a named volume and sees
+// only this project's session folder from the host, so sessions and project memory carry over without
+// exposing host credentials, hooks or other projects. See README "Development" for details.
+{
+	"name": "slotmap",
+	"build": { "dockerfile": "Dockerfile" },
+	"remoteUser": "vscode",
+	"containerUser": "vscode",
+	"updateRemoteUserUID": false,
+
+	"runArgs": [
+		"--userns=keep-id",              // files keep host ownership under rootless podman
+		"--security-opt=label=disable", // SELinux: use bind mounts without relabeling host dirs
+		"--cap-add=SYS_PTRACE"          // gdb and LeakSanitizer
+	],
+
+	// Same absolute path as on the host: Claude Code keys sessions and memory by working directory.
+	"workspaceMount": "source=${localWorkspaceFolder},target=${localWorkspaceFolder},type=bind",
+	"workspaceFolder": "${localWorkspaceFolder}",
+
+	"initializeCommand": "bash .devcontainer/init-host.sh",
+	"postStartCommand": "bash .devcontainer/init-container.sh",
+
+	"mounts": [
+		"source=slotmap-claude-${devcontainerId},target=/home/vscode/.claude,type=volume",
+		"source=${localWorkspaceFolder}/.devcontainer/.claude-project,target=/mnt/claude-project,type=bind"
+	],
+	"containerEnv": {
+		"CLAUDE_CONFIG_DIR": "/home/vscode/.claude",
+		"DISABLE_AUTOUPDATER": "1"
+	},
+
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"ms-vscode.cmake-tools",
+				"llvm-vs-code-extensions.vscode-clangd",
+				"anthropic.claude-code"
+			],
+			"settings": {
+				"cmake.useCMakePresets": "always",
+				"C_Cpp.intelliSenseEngine": "disabled",
+				"[cpp]": {
+					"editor.defaultFormatter": "llvm-vs-code-extensions.vscode-clangd",
+					"editor.formatOnSave": true
+				}
+			}
+		}
+	}
+}

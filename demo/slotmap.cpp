@@ -26,9 +26,9 @@ int main() {
 
 	auto element = slotmap.find(id); // lookup the slot containing the first "de "
 	auto removedByElement = slotmap.free(*element);
-	
+
 	auto removedById = slotmap.free(id); // conveniently try to remove directly by id
-	
+
 	assert(removedByElement && !removedById);
 
 	for (auto value : slotmap)

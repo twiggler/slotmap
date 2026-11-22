@@ -19,17 +19,21 @@ struct VectorAllocatorAdapter {
 
 struct Element { // Used in grow test
 	static constexpr auto magic = std::uint32_t(0xFEFEFEFE);
-	Element() : x(magic) {}
-	Element(std::uint32_t v) : x(v) {}
+	Element() :
+		x(magic) {}
+	Element(std::uint32_t v) :
+		x(v) {}
 
-	bool operator==(const Element& other) const { return x == other.x; }
+	bool operator==(const Element& other) const {
+		return x == other.x;
+	}
 
 	std::uint32_t x;
 };
 
 template<class TSlotmap, class TOracle>
 void assertSlotmapEqualsOracle(const TSlotmap& slotmap, const TOracle& oracle) {
-	auto transformSlot = [&](const auto& value) { return make_pair(slotmap.id(value), std::cref(value));  };
+	auto transformSlot = [&](const auto& value) { return make_pair(slotmap.id(value), std::cref(value)); };
 	auto isEqual = [](const auto& a, const auto& b) { return a.first == b.first && a.second == b.second; };
 	auto rangedIsEqual = range::equal(make_filtered(slotmap) | adaptors::transformed(transformSlot), oracle, isEqual);
 
@@ -62,7 +66,7 @@ void assertSkipmapEqualsOracle(const TSkipmap& skipmap, const TOracle& oracle) {
 }
 
 TEST(Slotmap, HandlesGenerationCycle) {
-	using TSlotmap = Slotmap<uint8_t, VectorAdapter, 2>; 
+	using TSlotmap = Slotmap<uint8_t, VectorAdapter, 2>;
 	TSlotmap slotmap(1);
 	auto& element = slotmap.alloc();
 	auto beforeCycleId = slotmap.id(element);
@@ -98,22 +102,19 @@ TEST(Slotmap, HandleClear) {
 }
 
 TEST(Slotmap, HandleGrow) {
-	constexpr auto FlagTypes = hana::make_tuple(
-		hana::int_c<SlotmapFlags::GROW>,
-		hana::int_c<SlotmapFlags::GROW | SlotmapFlags::SKIPFIELD>,
-		hana::int_c<SlotmapFlags::GROW | SlotmapFlags::SEGREGATE>,
-		hana::int_c<SlotmapFlags::GROW | SlotmapFlags::SKIPFIELD | SlotmapFlags::SEGREGATE>
-	);
+	constexpr auto FlagTypes = hana::make_tuple(hana::int_c<SlotmapFlags::GROW>, hana::int_c<SlotmapFlags::GROW | SlotmapFlags::SKIPFIELD>,
+												hana::int_c<SlotmapFlags::GROW | SlotmapFlags::SEGREGATE>,
+												hana::int_c<SlotmapFlags::GROW | SlotmapFlags::SKIPFIELD | SlotmapFlags::SEGREGATE>);
 
-	auto slotmapTypes = hana::transform(
-		FlagTypes,
-		[](auto flag) { return hana::type_c<Slotmap<Element, VectorAdapter, 32, 16, hana::value(flag)>>; }
-	);
+	auto slotmapTypes =
+		hana::transform(FlagTypes, [](auto flag) { return hana::type_c<Slotmap<Element, VectorAdapter, 32, 16, hana::value(flag)>>; });
 
 	auto test = [](auto slotmapType) {
 		using TSlotmap = decltype(slotmapType)::type;
 		using TId = typename TSlotmap::Id;
-		static_assert(TSlotmap::Segregating != is_same_v<typename TSlotmap::Storage, Twig::Container::detail::AggregateStorage<VectorAdapter, typename TSlotmap::value_type, TId>>);
+		static_assert(TSlotmap::Segregating !=
+					  is_same_v<typename TSlotmap::Storage,
+								Twig::Container::detail::AggregateStorage<VectorAdapter, typename TSlotmap::value_type, TId>>);
 
 		TSlotmap slotmap(4);
 		auto initialCapacity = slotmap.capacity();
@@ -147,36 +148,25 @@ TEST(Slotmap, InsertDelete) {
 	constexpr auto capacity = unsigned char(10);
 	constexpr auto elementTypes = hana::tuple_t<const char*, string>;
 	constexpr auto FlagTypes = hana::make_tuple(0_c, hana::int_c<SlotmapFlags::SKIPFIELD>);
-	auto slotmapTypes = hana::transform(
-		hana::cartesian_product(
-			hana::make_tuple(elementTypes, FlagTypes)
-		),
-		[](auto params) {
-			return hana::type_c<
-				Slotmap<
-				decltype(+params[0_c])::type,
-				VectorAdapter,
-				8, 4,
-				hana::value(params[1_c])
-				>
-			>;
-		}
-	);
+	auto slotmapTypes = hana::transform(hana::cartesian_product(hana::make_tuple(elementTypes, FlagTypes)), [](auto params) {
+		return hana::type_c<Slotmap<decltype(+params[0_c])::type, VectorAdapter, 8, 4, hana::value(params[1_c])>>;
+	});
 
 	auto test = [=](auto slotmapType) {
 		using TSlotmap = decltype(slotmapType)::type;
 		using TId = typename TSlotmap::Id;
 		static_assert(is_same_v<typename TSlotmap::value_type, const char*> !=
-			is_same_v<typename TSlotmap::Storage, Twig::Container::detail::SegregateStorage<VectorAdapter, typename TSlotmap::value_type, TId>>);
+					  is_same_v<typename TSlotmap::Storage,
+								Twig::Container::detail::SegregateStorage<VectorAdapter, typename TSlotmap::value_type, TId>>);
 		TSlotmap slotmap(capacity);
-		
+
 		auto idComparison = [](TId a, TId b) { return a.index < b.index; };
 		using TOracle = map<TId, typename TSlotmap::value_type, decltype(idComparison)>;
 		TOracle oracle(idComparison);
 		bool didRemove;
-					   
+
 		slotmap.push("Roel");
-		oracle[TId{0, 1 }] = "Roel";
+		oracle[TId{ 0, 1 }] = "Roel";
 		assertSlotmapEqualsOracle(slotmap, oracle);
 
 		auto middle = slotmap.push("Holland");
@@ -185,7 +175,7 @@ TEST(Slotmap, InsertDelete) {
 
 		auto& last = slotmap.alloc();
 		last = "Winter";
-		oracle[TId{2, 3 }] = "Winter";
+		oracle[TId{ 2, 3 }] = "Winter";
 
 		didRemove = slotmap.free(middle);
 		EXPECT_TRUE(didRemove);
@@ -218,13 +208,7 @@ TEST(Slotmap, InsertDelete) {
 }
 
 TEST(Slotmap, HandlesCustomAllocator) {
-	using TSlotmap = Slotmap<
-		uint8_t,
-		VectorAllocatorAdapter<temporary_allocator>::VectorAdapter,
-		2,
-		1,
-		SlotmapFlags::SKIPFIELD
-	>;
+	using TSlotmap = Slotmap<uint8_t, VectorAllocatorAdapter<temporary_allocator>::VectorAdapter, 2, 1, SlotmapFlags::SKIPFIELD>;
 	temporary_allocator alloc;
 	TSlotmap slotmap(1, 1, alloc);
 	SUCCEED();

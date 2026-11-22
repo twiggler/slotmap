@@ -5,19 +5,14 @@
 namespace Twig::Container::detail {
 
 template<class NodeIter, class SkipfieldIter>
-class SkipIterator : public boost::iterator_adaptor<
-	SkipIterator<NodeIter, SkipfieldIter>,
-	NodeIter,
-	boost::use_default,
-	boost::bidirectional_traversal_tag>
-{
+class SkipIterator : public boost::iterator_adaptor<SkipIterator<NodeIter, SkipfieldIter>, NodeIter, boost::use_default,
+													boost::bidirectional_traversal_tag> {
 public:
 	SkipIterator() = default;
 
 	explicit SkipIterator(NodeIter node, SkipfieldIter skipfieldNode) :
 		SkipIterator::iterator_adaptor(node),
-		_skipfieldNode(skipfieldNode)
-	{
+		_skipfieldNode(skipfieldNode) {
 		auto skipCount = *skipfieldNode;
 		_skipfieldNode += skipCount;
 		this->base_reference() += skipCount;
@@ -26,7 +21,7 @@ public:
 	template<class OtherIter>
 	SkipIterator(const SkipIterator<OtherIter, SkipfieldIter>& other) :
 		SkipIterator::iterator_adaptor(other.base()),
-		_skipfieldNode(other._skipfieldNode) { }
+		_skipfieldNode(other._skipfieldNode) {}
 
 private:
 	friend class boost::iterator_core_access;
@@ -49,7 +44,7 @@ private:
 
 template<class NodeIter, class SkipfieldIter>
 auto make_skip_iter(NodeIter nodeIter, SkipfieldIter skipfieldIter) {
-	return SkipIterator<NodeIter, SkipfieldIter>{nodeIter, skipfieldIter};
+	return SkipIterator<NodeIter, SkipfieldIter>{ nodeIter, skipfieldIter };
 }
 
 }

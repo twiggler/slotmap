@@ -7,7 +7,7 @@ namespace Twig::Container::detail {
 
 template<class T, class IdT>
 struct Item {
-	T value;	// value should be the first field to allow reinterpret_cast from T* to Item* and vice-versa.
+	T value; // value should be the first field to allow reinterpret_cast from T* to Item* and vice-versa.
 	IdT id;
 };
 
@@ -15,14 +15,8 @@ template<class Iter>
 auto makeFilterIter(Iter first, Iter last) {
 	// Convert to function - pointer because lambda cannot be default - constructed.
 	using V = typename std::iterator_traits<Iter>::reference;
-	
-	return makeValueIter(
-		boost::iterators::make_filter_iterator(
-			+[](const V item) { return item.id.valid(); },
-			first,
-			last
-		)
-	);
+
+	return makeValueIter(boost::iterators::make_filter_iterator(+[](const V item) { return item.id.valid(); }, first, last));
 }
 
 template<class Iter>
@@ -36,14 +30,11 @@ auto makeValueIter(Iter iter) {
 	using V = typename std::iterator_traits<Iter>::reference;
 
 	return boost::iterators::make_transform_iterator(
-		iter,
-		+[](V item) -> auto& { return item.value; }	// Return by reference! 
+		iter, +[](V item) -> auto& { return item.value; } // Return by reference!
 	);
 }
 
-template<template<class> class Vector,
-	     class T,
-	     class IdT>
+template<template<class> class Vector, class T, class IdT>
 class AggregateStorage {
 public:
 	using TItem = Item<T, IdT>;
@@ -57,11 +48,11 @@ public:
 
 	explicit AggregateStorage(Index capacity, const Allocator& allocator = {}) :
 		_vector(capacity, allocator) {}
-	
+
 	IdT id(Index index) const {
 		return _vector[index].id;
 	}
-	
+
 	IdT idByValue(const T& value) const {
 		return reinterpret_cast<const TItem&>(value).id;
 	}

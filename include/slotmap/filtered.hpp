@@ -7,11 +7,8 @@ namespace Twig::Container {
 template<class TSlotmap, bool FastIterable>
 class Filtered {
 public:
-	using iterator = std::conditional_t<
-		std::is_const_v<TSlotmap>,
-		typename TSlotmap::Storage::ConstFilterIterator,
-		typename TSlotmap::Storage::FilterIterator
-	>;
+	using iterator = std::conditional_t<std::is_const_v<TSlotmap>, typename TSlotmap::Storage::ConstFilterIterator,
+										typename TSlotmap::Storage::FilterIterator>;
 	using const_iterator = iterator;
 
 	explicit Filtered(TSlotmap& slotmap) :
@@ -35,15 +32,13 @@ public:
 	using iterator = std::conditional_t<
 		std::is_const_v<TSlotmap>,
 		detail::SkipIterator<typename TSlotmap::Storage::ConstValueIterator, typename TSlotmap::Skipfield::const_iterator>,
-		detail::SkipIterator<typename TSlotmap::Storage::ValueIterator, typename TSlotmap::Skipfield::const_iterator>
-	>;
+		detail::SkipIterator<typename TSlotmap::Storage::ValueIterator, typename TSlotmap::Skipfield::const_iterator>>;
 	using const_iterator = iterator;
 
 	using Skipfield = typename TSlotmap::Skipfield;
 
 	explicit Filtered(TSlotmap& slotmap) :
-		slotmap(&slotmap) {
-	}
+		slotmap(&slotmap) {}
 
 	iterator begin() const {
 		return detail::make_skip_iter(slotmap->_vector.begin(), slotmap->Skipfield::begin());

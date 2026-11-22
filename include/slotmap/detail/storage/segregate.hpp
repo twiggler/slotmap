@@ -12,15 +12,12 @@ template<class ValueIter, class IndexIter>
 auto makeFilterIter(ValueIter firstValue, ValueIter lastValue, IndexIter firstIndex, IndexIter lastIndex) {
 	// Convert to function - pointer because lambda cannot be default - constructed.
 	using V = std::pair<typename std::iterator_traits<ValueIter>::reference, typename std::iterator_traits<IndexIter>::reference>;
-	
+
 	return boost::make_transform_iterator(
 		boost::make_filter_iterator(
-			+[](V zip) { return zip.second.valid(); },
-			boost::make_zip_iterator(std::make_pair(firstValue, firstIndex)),
-			boost::make_zip_iterator(std::make_pair(lastValue, lastIndex))
-		),
-		+[](V filteredZip) -> auto& { return filteredZip.first; }
-	);
+			+[](V zip) { return zip.second.valid(); }, boost::make_zip_iterator(std::make_pair(firstValue, firstIndex)),
+			boost::make_zip_iterator(std::make_pair(lastValue, lastIndex))),
+		+[](V filteredZip) -> auto& { return filteredZip.first; });
 }
 
 template<class ValueIter, class IndexIter>
@@ -28,9 +25,7 @@ auto makeFilterIter(ValueIter valueIter, IndexIter indexIter) {
 	return makeFilterIter(valueIter, valueIter, indexIter, indexIter);
 }
 
-template<template<class> class Vector,
-		 class T,
-		 class IdT>
+template<template<class> class Vector, class T, class IdT>
 class SegregateStorage {
 public:
 	using ValueVector = Vector<T>;
@@ -46,7 +41,7 @@ public:
 
 	explicit SegregateStorage(Index capacity, const Allocator& allocator = {}) :
 		_values(capacity, allocator),
-		_indices(capacity, IndexAllocator{allocator}) {}
+		_indices(capacity, IndexAllocator{ allocator }) {}
 
 	IdT id(Index index) const {
 		return _indices[index];
@@ -89,8 +84,7 @@ public:
 	}
 
 	FilterIterator beginFilter(Index top) {
-		return makeFilterIter(_values.begin(), std::next(_values.begin(), top), 
-							   _indices.begin(), std::next(_indices.begin(), top));
+		return makeFilterIter(_values.begin(), std::next(_values.begin(), top), _indices.begin(), std::next(_indices.begin(), top));
 	}
 
 	FilterIterator endFilter(Index top) {
@@ -98,8 +92,7 @@ public:
 	}
 
 	ConstFilterIterator beginFilter(Index top) const {
-		return makeFilterIter(_values.begin(), std::next(_values.begin(), top),
-							   _indices.begin(), std::next(_indices.begin(), top));
+		return makeFilterIter(_values.begin(), std::next(_values.begin(), top), _indices.begin(), std::next(_indices.begin(), top));
 	}
 
 	ConstFilterIterator endFilter(Index top) const {

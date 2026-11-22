@@ -16,26 +16,22 @@ struct SlotmapFlags {
 	static constexpr auto SEGREGATE = 1u << 2;
 };
 
-template<class T,
-		 template<class> class Vector,
-		 unsigned IdBits = sizeof(unsigned) * CHAR_BIT,
-		 unsigned GenerationBits = IdBits / 2,
+template<class T, template<class> class Vector, unsigned IdBits = sizeof(unsigned) * CHAR_BIT, unsigned GenerationBits = IdBits / 2,
 		 unsigned Flags = 0>
-class Slotmap : detail::SelectSkipfield<bool(Flags & SlotmapFlags::SKIPFIELD), Vector, IdBits, GenerationBits>::type
-{
+class Slotmap : detail::SelectSkipfield<bool(Flags& SlotmapFlags::SKIPFIELD), Vector, IdBits, GenerationBits>::type {
 public:
 	static constexpr auto Resizable = bool(Flags & SlotmapFlags::GROW);
 	static constexpr auto FastIterable = bool(Flags & SlotmapFlags::SKIPFIELD);
 	static constexpr auto Segregating = bool(Flags & SlotmapFlags::SEGREGATE);
-	
+
 	using value_type = T;
 	using Id = detail::Id<IdBits, GenerationBits>;
-	using Storage = typename detail::SelectStorage<Vector, T, Id, bool(Flags & SlotmapFlags::SEGREGATE)>::type;
+	using Storage = typename detail::SelectStorage<Vector, T, Id, bool(Flags& SlotmapFlags::SEGREGATE)>::type;
 	using iterator = typename Storage::ValueIterator;
 	using const_iterator = typename Storage::ConstValueIterator;
 	using Allocator = typename Storage::Allocator;
 	using Skipfield = typename detail::SelectSkipfield<FastIterable, Vector, IdBits, GenerationBits>::type;
-		
+
 	explicit Slotmap(decltype(Id::index) capacity, decltype(Id::generation) generation = 1, const Allocator& allocator = {}) :
 		Skipfield(std::min(capacity, Id::limits().index) + 1u, typename Skipfield::Allocator(allocator)),
 		_generation(generation),
@@ -43,9 +39,8 @@ public:
 		_vector(_capacity, allocator),
 		_top(0),
 		_freeHead(Id::limits().index),
-		_size(0)
-	{
-		assert(( Id{ 1, generation }.valid()) );
+		_size(0) {
+		assert((Id{ 1, generation }.valid()));
 	}
 
 	void clear() {
@@ -89,14 +84,13 @@ public:
 		if (_freeHead < _top) {
 			index = _freeHead;
 			_freeHead = _vector.id(index).index;
-			 this->unskip(index);
+			this->unskip(index);
 		} else {
 			if (_size == _capacity) {
 				if (Resizable && _capacity != Id::limits().index) {
-					_capacity = _vector.grow();	// Assume the allocator value-initializes the item.
+					_capacity = _vector.grow(); // Assume the allocator value-initializes the item.
 					this->grow();
-				}
-				else
+				} else
 					throw OutOfSlots();
 			}
 
@@ -137,7 +131,7 @@ public:
 	bool free(Id id) {
 		using namespace std::rel_ops;
 		assert(id.valid());
-		
+
 		if (_vector.id(id.index) != id)
 			return false;
 
@@ -166,7 +160,7 @@ private:
 	using UInt = typename Id::UInt;
 
 	void doFree(Id id) {
-		auto oldFreeHead = _freeHead;    // Cannot use std::swap because it is illegal to form a reference to a bit field.
+		auto oldFreeHead = _freeHead; // Cannot use std::swap because it is illegal to form a reference to a bit field.
 		_freeHead = id.index;
 		this->skip(id.index);
 		_vector.setId(id.index, Id::free(oldFreeHead));

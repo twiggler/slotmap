@@ -1,5 +1,6 @@
 #include "test_support.hpp"
 
+#include <slotmap/detail/slotmap.hpp>
 #include <slotmap/detail/storage/aggregate.hpp>
 #include <slotmap/filtered.hpp>
 #include <slotmap/slotmap.hpp>
@@ -34,9 +35,10 @@ using SlotmapTypes =
 	::testing::Types<TestSlotmap<int, 0>, TestSlotmap<int, SlotmapFlags::SKIPFIELD>, TestSlotmap<int, SlotmapFlags::SEGREGATE>,
 					 TestSlotmap<int, SlotmapFlags::SKIPFIELD | SlotmapFlags::SEGREGATE>, TestSlotmap<std::string, 0>,
 					 TestSlotmap<std::string, SlotmapFlags::SKIPFIELD>,
-					 // Wide ids: 32- and 64-bit skipfield entries, which are not promoted to int.
-					 Slotmap<int, std::vector, 64, 32, SlotmapFlags::SKIPFIELD>,
-					 Slotmap<int, std::vector, 96, 32, SlotmapFlags::SKIPFIELD>>;
+					 // Wide ids, whose skipfield entries are not promoted to int: a 24-bit index (32-bit entries),
+					 // 32-bit fields (64-bit entries, see Id::UInt) and a 48-bit index (64-bit entries).
+					 Slotmap<int, std::vector, 32, 8, SlotmapFlags::SKIPFIELD>, Slotmap<int, std::vector, 64, 32, SlotmapFlags::SKIPFIELD>,
+					 Slotmap<int, std::vector, 64, 16, SlotmapFlags::SKIPFIELD>>;
 
 template<class TSlotmap>
 class SlotmapTest : public ::testing::Test {};
@@ -173,6 +175,10 @@ TYPED_TEST(SlotmapTest, RandomOperationSequences) {
 	TSlotmap slotmap(64);
 	Model<TSlotmap> model;
 	std::vector<typename TSlotmap::Id> stale;
+	// Generations come from one counter that wraps. Once it has, a stale id may legitimately match a reused slot,
+	// so stale ids are only checked before that.
+	const std::size_t distinctGenerations = TSlotmap::Id::limits().generation;
+	std::size_t allocations = 0;
 
 	for (int step = 0; step < 20000 && !::testing::Test::HasFailure(); step++) {
 		const int op = operation(random);
@@ -180,13 +186,14 @@ TYPED_TEST(SlotmapTest, RandomOperationSequences) {
 			auto value = makeValue<T>(step);
 			auto id = slotmap.push(value);
 			model[id.index] = { id, value };
+			allocations++;
 		} else if (op < 9 && !model.empty()) {
 			auto entry = std::next(model.begin(), std::uniform_int_distribution<std::size_t>(0, model.size() - 1)(random));
 			auto id = entry->second.first;
 			EXPECT_TRUE(op % 2 == 0 ? slotmap.free(id) : slotmap.free(*slotmap.find(id)));
 			stale.push_back(id);
 			model.erase(entry);
-		} else if (!stale.empty()) {
+		} else if (!stale.empty() && allocations < distinctGenerations) {
 			auto id = stale[std::uniform_int_distribution<std::size_t>(0, stale.size() - 1)(random)];
 			EXPECT_FALSE(slotmap.free(id));
 			EXPECT_EQ(slotmap.find(id), nullptr);
@@ -323,6 +330,20 @@ TYPED_TEST(GrowSlotmapTest, GrowsWhenFull) {
 // ---------------------------------------------------------------------------------------------------------
 // Individual behaviors.
 // ---------------------------------------------------------------------------------------------------------
+
+// Ids stay compact: both fields share one integer of the smallest suitable type.
+TEST(Slotmap, IdLayout) {
+	using detail::Id;
+	static_assert(std::is_same_v<Id<16, 8>::UInt, std::uint_least8_t> && sizeof(Id<16, 8>) == 2);
+	static_assert(std::is_same_v<Id<32, 16>::UInt, std::uint_least16_t> && sizeof(Id<32, 16>) == 4);
+	static_assert(std::is_same_v<Id<32, 8>::UInt, std::uint_least32_t> && sizeof(Id<32, 8>) == 4);
+	static_assert(std::is_same_v<Id<64, 32>::UInt, std::uint_least64_t> && sizeof(Id<64, 32>) == 8);
+	static_assert(std::is_same_v<Id<64, 16>::UInt, std::uint_least64_t> && sizeof(Id<64, 16>) == 8);
+	using ThirtyTwoBitFields = Id<64, 32>;
+	using FortyEightBitIndex = Id<64, 16>;
+	EXPECT_EQ(ThirtyTwoBitFields::limits().index, 0xFFFFFFFFu);
+	EXPECT_EQ(FortyEightBitIndex::limits().index, 0xFFFFFFFFFFFFu);
+}
 
 TEST(Slotmap, HandlesGenerationCycle) {
 	using TSlotmap = Slotmap<std::uint8_t, std::vector, 2>; // one index bit, one generation bit

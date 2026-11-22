@@ -31,9 +31,12 @@ struct Id {
 	static_assert(GenerationBits < IdBits); // It follows that IdBits > 0
 
 	static constexpr unsigned IndexBits = IdBits - GenerationBits;
-	static_assert(IndexBits <= 64 && GenerationBits <= 64);
+	static constexpr unsigned FieldBits = std::max(GenerationBits, IndexBits);
+	static_assert(FieldBits < 64, "the index and generation fields can be at most 63 bits wide");
 
-	using UInt = UIntLeast<std::max(GenerationBits, IndexBits)>; // the value of a bit field is limited by the type
+	// Type of both fields; the value of a bit field is limited by its type. A field of 32 or more bits gets a wider
+	// type than it needs, because MSVC warns about full-width bit fields of that size (C4293).
+	using UInt = UIntLeast<(FieldBits >= 32 ? FieldBits + 1 : FieldBits)>;
 
 	static constexpr Id limits() {
 		return { allOnes(IndexBits), allOnes(GenerationBits) };

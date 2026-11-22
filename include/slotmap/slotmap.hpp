@@ -25,7 +25,7 @@ struct SlotmapFlags {
 	static constexpr auto SEGREGATE = 1u << 2;
 };
 
-template<class T, template<class> class Vector, unsigned IdBits = sizeof(unsigned) * CHAR_BIT, unsigned GenerationBits = IdBits / 2,
+template<class T, template<class...> class Vector, unsigned IdBits = sizeof(unsigned) * CHAR_BIT, unsigned GenerationBits = IdBits / 2,
 		 unsigned Flags = 0>
 class Slotmap {
 public:

@@ -70,13 +70,13 @@ private:
 	}
 };
 
-template<bool UseSkipfield, template<class> class Vector, unsigned IdBits, unsigned GenerationBits>
+template<bool UseSkipfield, template<class...> class Vector, unsigned IdBits, unsigned GenerationBits>
 struct SelectSkipfield {
 	using UInt = typename Id<IdBits, GenerationBits>::UInt;
 	using type = std::conditional_t<UseSkipfield, Skipfield<Vector<UInt>>, NullSkipfield<Vector<UInt>>>;
 };
 
-template<template<class> class Vector, class T, class IdT, bool Segregate>
+template<template<class...> class Vector, class T, class IdT, bool Segregate>
 struct SelectStorage {
 	static constexpr bool HasStandardLayout = std::is_standard_layout_v<T>;
 	using type = std::conditional_t<!HasStandardLayout || Segregate, SegregateStorage<Vector, T, IdT>, AggregateStorage<Vector, T, IdT>>;

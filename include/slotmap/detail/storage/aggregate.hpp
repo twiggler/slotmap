@@ -13,7 +13,7 @@ struct Item {
 };
 
 // Stores each value next to its id (array of structures). Requires a standard-layout T.
-template<template<class> class Vector, class T, class IdT>
+template<template<class...> class Vector, class T, class IdT>
 class AggregateStorage {
 public:
 	using TItem = Item<T, IdT>;

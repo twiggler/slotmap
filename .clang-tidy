@@ -1,0 +1,40 @@
+# Linter configuration. Run through the `tidy` CMake preset (cmake --workflow --preset tidy) or clangd.
+# Naming rules follow the existing code: PascalCase types and template parameters, camelBack functions and
+# variables, `_camelBack` private members. Standard-library interface names are exempt.
+Checks: >
+  -*,
+  bugprone-*,
+  -bugprone-easily-swappable-parameters,
+  performance-*,
+  portability-*,
+  -portability-avoid-pragma-once,
+  modernize-*,
+  -modernize-use-trailing-return-type,
+  -modernize-use-nodiscard,
+  misc-include-cleaner,
+  readability-identifier-naming
+
+WarningsAsErrors: '*'
+HeaderFilterRegex: '.*/(include/slotmap|test|bench|demo)/.*'
+ExcludeHeaderFilterRegex: '.*/_deps/.*'
+
+CheckOptions:
+  readability-identifier-naming.ClassCase: CamelCase
+  readability-identifier-naming.StructCase: CamelCase
+  readability-identifier-naming.EnumCase: CamelCase
+  readability-identifier-naming.EnumConstantCase: CamelCase
+  readability-identifier-naming.TypeAliasCase: CamelCase
+  readability-identifier-naming.TypeAliasIgnoredRegexp: '^(value_type|iterator|const_iterator|reference|const_reference|pointer|difference_type|size_type|allocator_type|iterator_category|iterator_concept|type)$'
+  readability-identifier-naming.TypedefCase: CamelCase
+  readability-identifier-naming.TemplateParameterCase: CamelCase
+  readability-identifier-naming.ConceptCase: CamelCase
+  readability-identifier-naming.FunctionCase: camelBack
+  readability-identifier-naming.FunctionIgnoredRegexp: '^make_[a-z_]+$'
+  readability-identifier-naming.MethodCase: camelBack
+  readability-identifier-naming.VariableCase: camelBack
+  readability-identifier-naming.ParameterCase: camelBack
+  readability-identifier-naming.PublicMemberCase: camelBack
+  readability-identifier-naming.PrivateMemberCase: camelBack
+  readability-identifier-naming.PrivateMemberPrefix: '_'
+  readability-identifier-naming.ClassConstantCase: CamelCase
+  readability-identifier-naming.ClassConstantIgnoredRegexp: '^[A-Z][A-Z0-9_]*$'

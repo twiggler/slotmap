@@ -42,6 +42,8 @@
 			],
 			"settings": {
 				"cmake.useCMakePresets": "always",
+				// clangd looks for build/compile_commands.json; copy it there from the active preset.
+				"cmake.copyCompileCommands": "${workspaceFolder}/build/compile_commands.json",
 				"C_Cpp.intelliSenseEngine": "disabled",
 				"[cpp]": {
 					"editor.defaultFormatter": "llvm-vs-code-extensions.vscode-clangd",

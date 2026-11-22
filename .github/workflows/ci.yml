@@ -1,0 +1,91 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Newest GCC and Clang, sanitizers and clang-tidy, in the same image as local development.
+  dev-container:
+    name: ${{ matrix.preset }} (dev container)
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        preset: [gcc, clang-libcxx, asan, tidy]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Build dev container image
+        uses: docker/build-push-action@v6
+        with:
+          context: .devcontainer
+          tags: slotmap-dev
+          load: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: cmake --workflow --preset ${{ matrix.preset }}
+        run: docker run --rm --user root -v "$PWD":"$PWD" -w "$PWD" slotmap-dev cmake --workflow --preset ${{ matrix.preset }}
+
+  format:
+    name: clang-format (dev container)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Build dev container image
+        uses: docker/build-push-action@v6
+        with:
+          context: .devcontainer
+          tags: slotmap-dev
+          load: true
+          cache-from: type=gha
+      - name: Check formatting
+        run: docker run --rm --user root -v "$PWD":"$PWD" -w "$PWD" slotmap-dev clang-format --dry-run --Werror $(git ls-files '*.hpp' '*.cpp' '*.h')
+
+  # Oldest compilers that support the C++23 features the library uses.
+  oldest-supported:
+    name: ${{ matrix.name }}
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: GCC 14
+            preset: gcc
+            compiler: g++-14
+          - name: Clang 18 (libstdc++)
+            preset: clang
+            compiler: clang++-18
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update && sudo apt-get install -y ninja-build
+      - run: cmake --preset ${{ matrix.preset }} -DCMAKE_CXX_COMPILER=${{ matrix.compiler }}
+      - run: cmake --build --preset ${{ matrix.preset }}-debug && ctest --preset ${{ matrix.preset }}-debug
+      - run: cmake --build --preset ${{ matrix.preset }}-release && ctest --preset ${{ matrix.preset }}-release
+
+  macos:
+    name: Apple Clang
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: brew install ninja
+      - run: clang++ --version
+      - run: cmake --workflow --preset clang
+
+  windows:
+    name: MSVC
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ilammy/msvc-dev-cmd@v1
+      - run: cmake --workflow --preset msvc

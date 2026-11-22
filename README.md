@@ -1,6 +1,6 @@
 # Introduction
 
-Slotmap is a sequence container with weak reference keys written in C++17. It is especially useful for writing video games.
+Slotmap is a sequence container with weak reference keys written in C++23. It is especially useful for writing video games.
 
 Suppose you are writing a space combat simulator, and the player wants to lock his missile on the enemy spacecraft. This requires storing a reference to the enemy spacecraft. One solution would be to store a non-owning naked pointer to the target ship. However, this reference might outlive the target, possibly resulting in hard to track bugs.
 
@@ -23,8 +23,41 @@ A [demo](demo/slotmap.cpp) is provided in `demo/slotmap.cpp`.
 Slotmap is inspired by [this article](http://greysphere.tumblr.com/post/31601463396/data-arrays) by Jeff Gates, and [this](https://gamedev.stackexchange.com/questions/33888/what-is-the-most-efficient-container-to-store-dynamic-game-objects-in) discussion.
 Fast iteration is available by optionally using [skipfields](https://link.springer.com/epdf/10.1007/s40869-017-0038-3?author_access_token=cyehqAFuAEnx5rF1-5V3sve4RwlQNchNByi7wbcMAY5wgvdWX7FmurWl4trUGoDtyDH43_RnVt3Y6cI8090dRW3kI3LvrU9wCVzxVe_1gAg2Oc0OlIjjsBpTjDEAEr9gpnZenJKZ8SpkipppuHk4PA==).
 
-## Dependencies
-Slotmap requires the Boost header-only libraries `integer` and `iterator`. In addition, the unit-tests require the Boost header only libraries `range` and `hana`.
+## Requirements
+Slotmap is header-only and has no dependencies. It needs a C++23 compiler: GCC 14, Clang 18, Visual Studio 2022 or Xcode 16.3 (Apple Clang 17), or newer.
+
+## Using slotmap from CMake
+With `FetchContent`:
+```cmake
+include(FetchContent)
+FetchContent_Declare(slotmap GIT_REPOSITORY https://github.com/twiggler/slotmap.git GIT_TAG master)
+FetchContent_MakeAvailable(slotmap)
+target_link_libraries(my_game PRIVATE slotmap::slotmap)
+```
+Or install it (`cmake --install`) and use `find_package(slotmap REQUIRED)` with the same `slotmap::slotmap` target.
+
+## Development
+Builds use CMake presets: `cmake --workflow --preset <name>` configures, builds and tests in Debug and Release.
+Presets: `gcc`, `clang`, `clang-libcxx`, `msvc`, `asan` (AddressSanitizer and UndefinedBehaviorSanitizer) and `tidy` (clang-tidy).
+Visual Studio, VS Code (CMake Tools) and CLion pick up the presets directly.
+
+The [dev container](.devcontainer) has every toolchain the presets need, so nothing has to be installed on the host:
+- **VS Code:** "Dev Containers: Reopen in Container". With podman, set the user setting `"dev.containers.dockerPath": "podman"`.
+- **Command line:**
+  ```sh
+  podman build -t slotmap-dev .devcontainer
+  podman run --rm --userns=keep-id --security-opt label=disable -v "$PWD":"$PWD" -w "$PWD" slotmap-dev cmake --workflow --preset gcc
+  ```
+
+Formatting follows `.clang-format` (checked in CI); `.clang-tidy` is the linter.
+
+### Claude Code in the dev container
+The container keeps its own Claude Code configuration (login, settings) in a named volume, and sees only this project's session folder from the host (`~/.claude/projects/<project>`).
+The workspace is mounted at the same path as on the host, because Claude Code keys sessions by path, so sessions and project memory carry over in both directions.
+Host credentials, settings, hooks, skills and other projects are never mounted.
+
+Code running in the container can still read and change this project's sessions and memory, which the host's Claude Code later reads; it could already change the workspace itself.
+Treat the container as a reproducible toolchain, not as a sandbox for untrusted code.
 
 # Usage
 All library files reside in `include/slotmap`.
@@ -39,7 +72,7 @@ Use `make_filtered` to construct a range which skips unallocated slots.
 ## Configuration
 `Slotmap<...>` is a class template which requires two template parameters:
 1. `T`, the type to store in the slotmap.
-1. `Vector<U>`, a template parameter which specifies which underlying vector container the slotmap uses. An example is `template<class T> using Vector = std::vector<T>`. A possible alternative is to use `folly::fbvector`.
+1. `Vector<U>`, a template parameter which specifies which underlying vector container the slotmap uses. For example `std::vector` or `std::pmr::vector`; a possible alternative is `folly::fbvector`.
 
 There are three optional template parameters:
 1. `IdBits`, designates the size of the id in bits. A slotmap id type consists of a public `index` member field and a public `generation` member field. After every allocation, a global generation counter is incremented and assigned to the id of the allocated slot. The default is the size in bits of an unsigned int.

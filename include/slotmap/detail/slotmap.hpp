@@ -43,12 +43,15 @@ struct Id {
 		return { 0, 0 };
 	}
 
-	static Id free(UInt index) {
+	static constexpr Id free(UInt index) {
 		return { index, 0 };
 	}
 
-	static UInt evolve(UInt generation) {
-		return std::max(1, (generation + 1) & limits().generation);
+	// Next generation, wrapping around and skipping 0, which marks invalid ids. Computed in UInt so that it also
+	// works when UInt is not promoted to int (32- and 64-bit fields).
+	static constexpr UInt evolve(UInt generation) {
+		const auto next = static_cast<UInt>(static_cast<UInt>(generation + 1) & limits().generation);
+		return next != 0 ? next : UInt{ 1 };
 	}
 
 	bool valid() const {

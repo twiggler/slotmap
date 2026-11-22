@@ -195,6 +195,29 @@ TYPED_TEST(SlotmapTest, RandomOperationSequences) {
 	expectEqualsModel(slotmap, model);
 }
 
+// Id::null() is the natural "no element" key (no missile target, no selection). It must never resolve, not on a
+// new slotmap, not after slots were used, and not after clear().
+TYPED_TEST(SlotmapTest, NullIdFindsNothing) {
+	using TSlotmap = TypeParam;
+	using T = typename TSlotmap::value_type;
+	const auto null = TSlotmap::Id::null();
+	TSlotmap slotmap(4);
+	EXPECT_EQ(slotmap.find(null), nullptr);
+	EXPECT_FALSE(slotmap.free(null));
+
+	auto first = slotmap.push(makeValue<T>(1));
+	slotmap.push(makeValue<T>(2));
+	EXPECT_EQ(slotmap.find(null), nullptr);
+	slotmap.free(first);
+	EXPECT_EQ(slotmap.find(null), nullptr);
+	EXPECT_FALSE(slotmap.free(null));
+
+	slotmap.clear();
+	EXPECT_EQ(slotmap.find(null), nullptr);
+	EXPECT_FALSE(slotmap.free(null));
+	EXPECT_EQ(slotmap.size(), 0u);
+}
+
 TYPED_TEST(SlotmapTest, WorksWithStdRanges) {
 	using TSlotmap = TypeParam;
 	using T = typename TSlotmap::value_type;
@@ -310,6 +333,31 @@ TEST(Slotmap, HandlesGenerationCycle) {
 
 	EXPECT_EQ(beforeCycleId.index, afterCycleId.index);
 	EXPECT_EQ(beforeCycleId.generation, afterCycleId.generation);
+}
+
+TEST(Slotmap, SupportsSixtyFourBitIds) {
+	using TSlotmap = Slotmap<int, std::vector, 64, 32>;
+	TSlotmap slotmap(4);
+	auto first = slotmap.push(1);
+	EXPECT_TRUE(slotmap.free(first));
+	auto second = slotmap.push(2);
+
+	EXPECT_EQ(second.index, first.index);
+	EXPECT_EQ(second.generation, first.generation + 1);
+	EXPECT_EQ(slotmap.find(first), nullptr);
+	ASSERT_NE(slotmap.find(second), nullptr);
+	EXPECT_EQ(*slotmap.find(second), 2);
+}
+
+TEST(Slotmap, NullIdOnEmptyGrowableSlotmap) {
+	using TSlotmap = Slotmap<int, std::vector, 32, 16, SlotmapFlags::GROW>;
+	TSlotmap slotmap(0);
+	EXPECT_EQ(slotmap.find(TSlotmap::Id::null()), nullptr);
+
+	auto id = slotmap.push(7);
+	EXPECT_EQ(slotmap.find(TSlotmap::Id::null()), nullptr);
+	ASSERT_NE(slotmap.find(id), nullptr);
+	EXPECT_EQ(*slotmap.find(id), 7);
 }
 
 TEST(Slotmap, ThrowsWhenOutOfSlots) {

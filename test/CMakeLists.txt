@@ -15,6 +15,8 @@ add_executable(slotmap_tests
 	skipfield_test.cpp)
 target_link_libraries(slotmap_tests PRIVATE slotmap::slotmap GTest::gtest_main)
 slotmap_configure_target(slotmap_tests)
+# std::getenv is standard; MSVC's runtime deprecates it in favor of _dupenv_s.
+target_compile_definitions(slotmap_tests PRIVATE $<$<CXX_COMPILER_ID:MSVC>:_CRT_SECURE_NO_WARNINGS>)
 
 include(GoogleTest)
 gtest_discover_tests(slotmap_tests)

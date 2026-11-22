@@ -34,23 +34,23 @@ public:
 			case 1: // Block to the left; index is a tail node.
 				{
 					const auto blockStartOffset = _data[index - 1];
-					const auto newBlockSize = blockStartOffset + 1;
+					const auto newBlockSize = toIndex(blockStartOffset + 1);
 					_data[index] = newBlockSize;
 					_data[index - blockStartOffset] = newBlockSize;
 					break;
 				}
 			case 2: // Block to the right; index is a head node.
 				{
-					const auto blockSize = _data[index + 1] + 1;
+					const auto blockSize = toIndex(_data[index + 1] + 1);
 					createSkipBlock(index, blockSize);
 					break;
 				}
 			case 3: // Block to the left and right.
 				{
 					const auto blockStartOffset = _data[index - 1];
-					const auto combinedBlockSize = blockStartOffset + _data[index + 1] + 1;
+					const auto combinedBlockSize = toIndex(blockStartOffset + _data[index + 1] + 1);
 					_data[index - blockStartOffset] = combinedBlockSize;
-					fillSkipBlock(index, combinedBlockSize, blockStartOffset + 1);
+					fillSkipBlock(index, combinedBlockSize, toIndex(blockStartOffset + 1));
 				}
 		}
 	}
@@ -67,26 +67,26 @@ public:
 				}
 			case 1: // Block to the left, index is a tail node.
 				{
-					const auto leftBlockLength = _data[index] - 1;
+					const auto leftBlockLength = toIndex(_data[index] - 1);
 					_data[index] = 0;
 					_data[index - leftBlockLength] = leftBlockLength;
 					break;
 				}
 			case 2: // Block to the right, index is a head node.
 				{
-					auto blockLength = _data[index] - 1;
+					auto blockLength = toIndex(_data[index] - 1);
 					_data[index] = 0;
-					createSkipBlock(index + 1, blockLength);
+					createSkipBlock(toIndex(index + 1), blockLength);
 					break;
 				}
 			case 3: // Node is within a skip block
 				{
 					auto x = _data[index];
-					auto leftBlockLength = x - 1;
-					const auto rightBlockLength = _data[index - leftBlockLength] - x;
+					auto leftBlockLength = toIndex(x - 1);
+					const auto rightBlockLength = toIndex(_data[index - leftBlockLength] - x);
 					_data[index - leftBlockLength] = leftBlockLength;
 					_data[index] = 0;
-					createSkipBlock(index + 1, rightBlockLength);
+					createSkipBlock(toIndex(index + 1), rightBlockLength);
 					break;
 				}
 		}
@@ -110,9 +110,14 @@ public:
 	}
 
 private:
+	// Arithmetic on Index promotes to int; results always fit, because they are bounded by the capacity.
+	static Index toIndex(int value) {
+		return static_cast<Index>(value);
+	}
+
 	void createSkipBlock(Index index, Index length) {
 		_data[index] = length;
-		fillSkipBlock(index + 1, length);
+		fillSkipBlock(toIndex(index + 1), length);
 	}
 
 	void fillSkipBlock(Index index, Index length, Index start = 2) {

@@ -6,7 +6,7 @@
 namespace Twig::Container::detail {
 
 // Stores values and ids in parallel arrays (structure of arrays). Works for any T.
-template<template<class> class Vector, class T, class IdT>
+template<template<class...> class Vector, class T, class IdT>
 class SegregateStorage {
 public:
 	using ValueVector = Vector<T>;

@@ -10,6 +10,10 @@ function(slotmap_configure_target target)
 		target_compile_options(${target} PRIVATE /W4 /permissive- /WX /Zc:__cplusplus /utf-8)
 	else()
 		target_compile_options(${target} PRIVATE -Wall -Wextra -Wpedantic -Wshadow -Werror)
+		if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+			# Narrowing integer conversions: what MSVC reports at /W4 (C4244, C4267), so they are caught locally.
+			target_compile_options(${target} PRIVATE -Wimplicit-int-conversion -Wshorten-64-to-32)
+		endif()
 	endif()
 
 	if(SLOTMAP_CLANG_TIDY)

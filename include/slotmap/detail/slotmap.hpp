@@ -47,8 +47,11 @@ struct Id {
 		return { index, 0 };
 	}
 
-	static UInt evolve(UInt generation) {
-		return std::max(1, (generation + 1) & limits().generation);
+	// Next generation, wrapping around and skipping 0, which marks invalid ids. Computed in UInt so that it also
+	// works when UInt is not promoted to int (32- and 64-bit fields).
+	static constexpr UInt evolve(UInt generation) {
+		const auto next = static_cast<UInt>(static_cast<UInt>(generation + 1) & limits().generation);
+		return next != 0 ? next : UInt{ 1 };
 	}
 
 	bool valid() const {
@@ -67,13 +70,13 @@ private:
 	}
 };
 
-template<bool UseSkipfield, template<class> class Vector, unsigned IdBits, unsigned GenerationBits>
+template<bool UseSkipfield, template<class...> class Vector, unsigned IdBits, unsigned GenerationBits>
 struct SelectSkipfield {
 	using UInt = typename Id<IdBits, GenerationBits>::UInt;
 	using type = std::conditional_t<UseSkipfield, Skipfield<Vector<UInt>>, NullSkipfield<Vector<UInt>>>;
 };
 
-template<template<class> class Vector, class T, class IdT, bool Segregate>
+template<template<class...> class Vector, class T, class IdT, bool Segregate>
 struct SelectStorage {
 	static constexpr bool HasStandardLayout = std::is_standard_layout_v<T>;
 	using type = std::conditional_t<!HasStandardLayout || Segregate, SegregateStorage<Vector, T, IdT>, AggregateStorage<Vector, T, IdT>>;

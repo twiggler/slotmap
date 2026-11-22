@@ -2,6 +2,7 @@
 
 namespace Twig::Container::detail {
 
+// Stands in for Skipfield when fast iteration is not requested; empty, so it takes no space.
 template<class Vector>
 class NullSkipfield {
 public:
@@ -17,14 +18,6 @@ public:
 	void unskip(Index) {}
 
 	void grow() {}
-
-	auto begin() const {
-		return nullptr;
-	}
-
-	auto end() const {
-		return nullptr;
-	}
 };
 
-}
+} // namespace Twig::Container::detail

@@ -1,10 +1,12 @@
 #pragma once
 
 #include <algorithm>
-#include <numeric>
+#include <cstddef>
 
 namespace Twig::Container::detail {
 
+// Jump-counting skipfield: live slots hold 0; a run of n free slots holds n in its first slot and
+// 2, 3, ..., n in the following ones, so iterators can jump over a run from either end.
 template<class Vector>
 class Skipfield {
 public:
@@ -103,6 +105,10 @@ public:
 		return _data.end();
 	}
 
+	Index operator[](std::size_t index) const {
+		return _data[index];
+	}
+
 private:
 	void createSkipBlock(Index index, Index length) {
 		_data[index] = length;
@@ -121,4 +127,4 @@ private:
 	Vector _data;
 };
 
-}
+} // namespace Twig::Container::detail

@@ -1,61 +1,48 @@
 #pragma once
+
+#include "detail/slot_iterator.hpp"
 #include "slotmap.hpp"
-#include "detail/skipfield/skipiterator.hpp"
+
+#include <ranges>
+#include <type_traits>
 
 namespace Twig::Container {
 
-template<class TSlotmap, bool FastIterable>
-class Filtered {
+// View over the allocated slots of a slotmap, skipping free ones. Jumps over runs of free slots when the
+// slotmap has a skipfield, and checks each slot otherwise.
+template<class TSlotmap, bool FastIterable = TSlotmap::FastIterable>
+class Filtered : public std::ranges::view_interface<Filtered<TSlotmap, FastIterable>> {
+	static_assert(!FastIterable || TSlotmap::FastIterable, "fast iteration needs a slotmap with SlotmapFlags::SKIPFIELD");
+
 public:
-	using iterator = std::conditional_t<std::is_const_v<TSlotmap>, typename TSlotmap::Storage::ConstFilterIterator,
-										typename TSlotmap::Storage::FilterIterator>;
+	using iterator = detail::SlotIterator<TSlotmap, std::conditional_t<FastIterable, detail::SkipAdvance, detail::IdCheckAdvance>>;
 	using const_iterator = iterator;
 
+	Filtered() = default;
+
 	explicit Filtered(TSlotmap& slotmap) :
-		slotmap(&slotmap) {}
+		_slotmap(&slotmap) {}
 
 	iterator begin() const {
-		return slotmap->_vector.beginFilter(slotmap->_top);
+		return iterator::begin(*_slotmap);
 	}
 
 	iterator end() const {
-		return slotmap->_vector.endFilter(slotmap->_top);
+		return iterator::end(*_slotmap);
 	}
 
 private:
-	TSlotmap* slotmap;
-};
-
-template<class TSlotmap>
-class Filtered<TSlotmap, true> {
-public:
-	using iterator = std::conditional_t<
-		std::is_const_v<TSlotmap>,
-		detail::SkipIterator<typename TSlotmap::Storage::ConstValueIterator, typename TSlotmap::Skipfield::const_iterator>,
-		detail::SkipIterator<typename TSlotmap::Storage::ValueIterator, typename TSlotmap::Skipfield::const_iterator>>;
-	using const_iterator = iterator;
-
-	using Skipfield = typename TSlotmap::Skipfield;
-
-	explicit Filtered(TSlotmap& slotmap) :
-		slotmap(&slotmap) {}
-
-	iterator begin() const {
-		return detail::make_skip_iter(slotmap->_vector.begin(), slotmap->Skipfield::begin());
-	}
-
-	iterator end() const {
-		return detail::make_skip_iter(std::next(slotmap->_vector.begin(), slotmap->_top),
-									  std::next(slotmap->Skipfield::begin(), slotmap->_top));
-	}
-
-private:
-	TSlotmap* slotmap;
+	TSlotmap* _slotmap = nullptr;
 };
 
 template<class TSlotmap>
 auto make_filtered(TSlotmap& slotmap) {
-	return Filtered<TSlotmap, TSlotmap::FastIterable>(slotmap);
+	return Filtered<TSlotmap>(slotmap);
 }
 
-}
+} // namespace Twig::Container
+
+// Iterators point into the slotmap, not into the view, so they stay valid after the view is gone.
+template<class TSlotmap, bool FastIterable>
+// NOLINTNEXTLINE(readability-identifier-naming): specialization of a standard-library name
+constexpr bool std::ranges::enable_borrowed_range<Twig::Container::Filtered<TSlotmap, FastIterable>> = true;

@@ -3,7 +3,7 @@
 //
 // Claude Code: the container keeps its own Claude config (login, settings) in a named volume and sees
 // only this project's session folder from the host, so sessions and project memory carry over without
-// exposing host credentials, hooks or other projects. See README "Development" for details.
+// exposing host credentials, hooks or other projects. See README.md in this folder.
 {
 	"name": "slotmap",
 	"build": { "dockerfile": "Dockerfile" },

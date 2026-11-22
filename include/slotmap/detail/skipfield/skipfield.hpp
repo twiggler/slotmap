@@ -1,6 +1,7 @@
 #pragma once
 
 #include <algorithm>
+#include <concepts>
 #include <cstddef>
 
 namespace Twig::Container::detail {
@@ -110,8 +111,10 @@ public:
 	}
 
 private:
-	// Arithmetic on Index promotes to int; results always fit, because they are bounded by the capacity.
-	static Index toIndex(int value) {
+	// Arithmetic on an Index narrower than int yields an int; this converts such results back explicitly, so that
+	// compilers warning about narrowing (MSVC at /W4) accept it. Wider Index types pass through unchanged. The
+	// values always fit, because run lengths and positions are bounded by the capacity.
+	static Index toIndex(std::integral auto value) {
 		return static_cast<Index>(value);
 	}
 

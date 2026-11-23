@@ -40,3 +40,5 @@ and GCC 14 and Clang 18 (the oldest supported compilers), Apple Clang and MSVC o
 The actions the workflow uses are locked to exact commits in `.github/workflows/actions.lock`, which CI verifies.
 After changing any `uses:`, regenerate it with [gh-actions-lock](https://github.com/github/gh-actions-lock)
 (`gh extension install github/gh-actions-lock`, then `gh actions-lock`) and commit it.
+[zizmor](https://docs.zizmor.sh) checks the workflows in CI. Dependabot proposes monthly updates for the actions and the
+dev container's base image, skipping releases younger than a week.

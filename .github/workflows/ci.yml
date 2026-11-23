@@ -103,6 +103,19 @@ jobs:
       - uses: ilammy/msvc-dev-cmd@v1.13.0
       - run: cmake --workflow --preset msvc
 
+  # Security linter for the workflows and the Dependabot configuration. The zizmor version comes with the action,
+  # so Dependabot updates both.
+  zizmor:
+    name: zizmor
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - uses: zizmorcore/zizmor-action@v0.8.1
+        with:
+          advanced-security: false
+
   # Fails when .github/workflows/actions.lock is out of sync with the workflows, or a locked commit no longer
   # verifies upstream. After changing any `uses:`, run `gh actions-lock` locally and commit the lockfile.
   lockfile:

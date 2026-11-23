@@ -3,9 +3,10 @@ build/
 out/
 CMakeUserPresets.json
 
-# Editor and tool state
+# Editor and tool state (the dev container configures VS Code)
 .cache/
 .vs/
+.vscode/
 .idea/
 *.user
 

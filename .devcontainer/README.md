@@ -1,7 +1,8 @@
 # Dev container
 
-A Fedora image with GCC, Clang (libstdc++ and libc++), CMake, Ninja, clangd, clang-format, clang-tidy, gdb and the
-Claude Code CLI. [CONTRIBUTING.md](../CONTRIBUTING.md) explains how to use it.
+A Fedora image in two stages: `toolchain` has GCC, Clang (libstdc++ and libc++), CMake, Ninja, clangd, clang-format,
+clang-tidy and gdb, and is what CI uses; `dev` adds the Claude Code CLI and a non-root user for VS Code.
+[CONTRIBUTING.md](../CONTRIBUTING.md) explains how to use it.
 
 The podman run flags:
 - `--userns=keep-id`: files created in the container belong to your host user.

@@ -1,6 +1,10 @@
-# Development and CI image for slotmap: newest GCC, Clang (libstdc++ and libc++), CMake, Ninja,
-# clangd/clang-format/clang-tidy, gdb, and the Claude Code CLI.
-FROM registry.fedoraproject.org/fedora:44
+# Two stages:
+# - toolchain: newest GCC, Clang (libstdc++ and libc++), CMake, Ninja, clangd/clang-format/clang-tidy and gdb.
+#   CI builds and tests in this stage.
+# - dev: the toolchain plus the Claude Code CLI and a non-root user, for the VS Code dev container.
+#   This is the last stage, so a plain `podman build` produces it.
+
+FROM registry.fedoraproject.org/fedora:44 AS toolchain
 
 RUN dnf install -y --setopt=install_weak_deps=False \
 		gcc-c++ libasan libubsan \
@@ -8,7 +12,11 @@ RUN dnf install -y --setopt=install_weak_deps=False \
 		clang-tools-extra \
 		cmake ninja-build \
 		gdb git diffutils \
-		nodejs npm \
+	&& dnf clean all
+
+FROM toolchain AS dev
+
+RUN dnf install -y --setopt=install_weak_deps=False nodejs npm \
 	&& dnf clean all
 
 # Claude Code CLI, pinned. Auto-updates are disabled via DISABLE_AUTOUPDATER in devcontainer.json.

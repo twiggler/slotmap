@@ -1,0 +1,21 @@
+# Monthly update PRs for the CI actions (gh-actions-lock's actions.lock is updated with them) and for the dev
+# container's base image. The cooldown skips releases younger than a week, so a compromised release has time to be
+# noticed and pulled before it is proposed here.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    cooldown:
+      default-days: 7
+    groups:
+      github-actions:
+        patterns: ["*"]
+
+  - package-ecosystem: docker
+    directory: /.devcontainer
+    schedule:
+      interval: monthly
+    cooldown:
+      default-days: 7

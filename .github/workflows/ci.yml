@@ -14,7 +14,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # Newest GCC and Clang, sanitizers and clang-tidy, in the same image as local development.
+  # Newest GCC and Clang, sanitizers and clang-tidy, in the dev container's toolchain stage
+  # (the same compilers as local development, without the Claude Code CLI).
   dev-container:
     name: ${{ matrix.preset }} (dev container)
     runs-on: ubuntu-24.04
@@ -29,6 +30,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .devcontainer
+          target: toolchain
           tags: slotmap-dev
           load: true
           cache-from: type=gha
@@ -46,6 +48,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .devcontainer
+          target: toolchain
           tags: slotmap-dev
           load: true
           cache-from: type=gha

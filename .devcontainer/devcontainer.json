@@ -6,7 +6,7 @@
 // exposing host credentials, hooks or other projects. See README.md in this folder.
 {
 	"name": "slotmap",
-	"build": { "dockerfile": "Dockerfile" },
+	"build": { "dockerfile": "Dockerfile", "target": "dev" },
 	"remoteUser": "vscode",
 	"containerUser": "vscode",
 	"updateRemoteUserUID": false,

@@ -22,7 +22,7 @@ The [dev container](.devcontainer) has every toolchain the presets need, so noth
 - **VS Code:** "Dev Containers: Reopen in Container". With podman, set the user setting `"dev.containers.dockerPath": "podman"`.
 - **Command line:**
   ```sh
-  podman build -t slotmap-dev .devcontainer
+  podman build --target toolchain -t slotmap-dev .devcontainer
   podman run --rm --userns=keep-id --security-opt label=disable -v "$PWD":"$PWD" -w "$PWD" slotmap-dev cmake --workflow --preset gcc
   ```
 
@@ -34,5 +34,5 @@ Formatting-only commits are listed in `.git-blame-ignore-revs`, so `git blame` s
 (`git config blame.ignoreRevsFile .git-blame-ignore-revs`).
 
 ## Continuous integration
-CI runs the newest GCC and Clang, the sanitizers, clang-tidy and clang-format in the dev container image,
+CI runs the newest GCC and Clang, the sanitizers, clang-tidy and clang-format in the dev container's toolchain stage,
 and GCC 14 and Clang 18 (the oldest supported compilers), Apple Clang and MSVC on GitHub's runners.

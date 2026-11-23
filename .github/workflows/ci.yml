@@ -24,10 +24,12 @@ jobs:
       matrix:
         preset: [gcc, clang-libcxx, asan, tidy]
     steps:
-      - uses: actions/checkout@v4
-      - uses: docker/setup-buildx-action@v3
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - uses: docker/setup-buildx-action@v4.4.1
       - name: Build dev container image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7.4.0
         with:
           context: .devcontainer
           target: toolchain
@@ -42,10 +44,12 @@ jobs:
     name: clang-format (dev container)
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
-      - uses: docker/setup-buildx-action@v3
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - uses: docker/setup-buildx-action@v4.4.1
       - name: Build dev container image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7.4.0
         with:
           context: .devcontainer
           target: toolchain
@@ -70,7 +74,9 @@ jobs:
             preset: clang
             compiler: clang++-18
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
       - run: sudo apt-get update && sudo apt-get install -y ninja-build
       - run: cmake --preset ${{ matrix.preset }} -DCMAKE_CXX_COMPILER=${{ matrix.compiler }}
       - run: cmake --build --preset ${{ matrix.preset }}-debug && ctest --preset ${{ matrix.preset }}-debug
@@ -80,7 +86,9 @@ jobs:
     name: Apple Clang
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
       - run: brew install ninja
       - run: clang++ --version
       - run: cmake --workflow --preset clang
@@ -89,6 +97,22 @@ jobs:
     name: MSVC
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: ilammy/msvc-dev-cmd@v1
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ilammy/msvc-dev-cmd@v1.13.0
       - run: cmake --workflow --preset msvc
+
+  # Fails when .github/workflows/actions.lock is out of sync with the workflows, or a locked commit no longer
+  # verifies upstream. After changing any `uses:`, run `gh actions-lock` locally and commit the lockfile.
+  lockfile:
+    name: Actions lockfile
+    runs-on: ubuntu-24.04
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - run: gh extension install github/gh-actions-lock --pin v0.5.1
+      - run: gh actions-lock --verify

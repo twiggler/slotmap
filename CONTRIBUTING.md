@@ -36,3 +36,7 @@ Formatting-only commits are listed in `.git-blame-ignore-revs`, so `git blame` s
 ## Continuous integration
 CI runs the newest GCC and Clang, the sanitizers, clang-tidy and clang-format in the dev container's toolchain stage,
 and GCC 14 and Clang 18 (the oldest supported compilers), Apple Clang and MSVC on GitHub's runners.
+
+The actions the workflow uses are locked to exact commits in `.github/workflows/actions.lock`, which CI verifies.
+After changing any `uses:`, regenerate it with [gh-actions-lock](https://github.com/github/gh-actions-lock)
+(`gh extension install github/gh-actions-lock`, then `gh actions-lock`) and commit it.

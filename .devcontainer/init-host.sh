@@ -10,3 +10,9 @@ source "$workspace/.devcontainer/claude-project-key.sh"
 session_dir="$HOME/.claude/projects/$(claude_project_key "$workspace")"
 mkdir -p "$session_dir"
 ln -sfn "$session_dir" "$workspace/.devcontainer/.claude-project"
+
+# On SELinux hosts, give the session folder the shared container label so the confined container can use it.
+# podman's relabel option would label the symlink instead of the folder, so label the folder here.
+if command -v selinuxenabled >/dev/null && selinuxenabled; then
+	chcon -R -t container_file_t -l s0 "$session_dir"
+fi

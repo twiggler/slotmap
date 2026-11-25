@@ -23,7 +23,7 @@ The [dev container](.devcontainer) has every toolchain the presets need, so noth
 - **Command line:**
   ```sh
   podman build --target toolchain -t slotmap-dev .devcontainer
-  podman run --rm --userns=keep-id --security-opt label=disable -v "$PWD":"$PWD" -w "$PWD" slotmap-dev cmake --workflow --preset gcc
+  podman run --rm --userns=keep-id -v "$PWD":"$PWD":z -w "$PWD" slotmap-dev cmake --workflow --preset gcc
   ```
 
 [.devcontainer/README.md](.devcontainer/README.md) describes what the container contains and how it works with Claude Code.

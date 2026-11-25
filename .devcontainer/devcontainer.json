@@ -12,13 +12,14 @@
 	"updateRemoteUserUID": false,
 
 	"runArgs": [
-		"--userns=keep-id",              // files keep host ownership under rootless podman
-		"--security-opt=label=disable", // SELinux: use bind mounts without relabeling host dirs
-		"--cap-add=SYS_PTRACE"          // gdb and LeakSanitizer
+		"--userns=keep-id",     // files keep host ownership under rootless podman
+		"--cap-add=SYS_PTRACE"  // gdb and LeakSanitizer
 	],
 
 	// Same absolute path as on the host: Claude Code keys sessions and memory by working directory.
-	"workspaceMount": "source=${localWorkspaceFolder},target=${localWorkspaceFolder},type=bind",
+	// relabel=shared (podman) gives the workspace SELinux's shared container label, so SELinux keeps confining the
+	// container instead of being disabled for it.
+	"workspaceMount": "source=${localWorkspaceFolder},target=${localWorkspaceFolder},type=bind,relabel=shared",
 	"workspaceFolder": "${localWorkspaceFolder}",
 
 	"initializeCommand": "bash .devcontainer/init-host.sh",

@@ -6,7 +6,8 @@ clang-tidy and gdb, and is what CI uses; `dev` adds the Claude Code CLI and a no
 
 The podman run flags:
 - `--userns=keep-id`: files created in the container belong to your host user.
-- `--security-opt=label=disable`: lets hosts with SELinux use the bind mounts without relabeling them.
+- SELinux stays on: the workspace mount uses `relabel=shared`, and `init-host.sh` labels the Claude Code session folder
+  the same way, so the container can use both but nothing else in your home folder. These are podman options.
 - `--cap-add=SYS_PTRACE`: needed by gdb and LeakSanitizer.
 
 ## Claude Code

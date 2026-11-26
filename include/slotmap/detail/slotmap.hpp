@@ -50,11 +50,9 @@ struct Id {
 		return { index, 0 };
 	}
 
-	// Next generation, wrapping around and skipping 0, which marks invalid ids. Computed in UInt so that it also
-	// works when UInt is not promoted to int (32- and 64-bit fields).
+	// Next generation: cycles through 1 … max, skipping 0, which marks invalid ids.
 	static constexpr UInt evolve(UInt generation) {
-		const auto next = static_cast<UInt>(static_cast<UInt>(generation + 1) & limits().generation);
-		return next != 0 ? next : UInt{ 1 };
+		return static_cast<UInt>(generation % limits().generation + 1);
 	}
 
 	bool valid() const {

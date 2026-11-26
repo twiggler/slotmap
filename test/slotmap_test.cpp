@@ -8,6 +8,7 @@
 #include <gtest/gtest.h>
 
 #include <algorithm>
+#include <array>
 #include <concepts>
 #include <cstddef>
 #include <deque>
@@ -371,6 +372,29 @@ TEST(Slotmap, IdLayout) {
 	using FortyEightBitIndex = Id<64, 16>;
 	EXPECT_EQ(ThirtyTwoBitFields::limits().index, 0xFFFFFFFFu);
 	EXPECT_EQ(FortyEightBitIndex::limits().index, 0xFFFFFFFFFFFFu);
+}
+
+// Generations cycle through 1 … max, skipping 0, which marks invalid ids.
+TEST(Slotmap, IdGenerationsCycle) {
+	using detail::Id;
+	using ThreeBitGeneration = Id<8, 3>; // generations 1 … 7
+	constexpr auto cycle = [] {
+		std::array<unsigned, 8> generations{};
+		ThreeBitGeneration::UInt generation = 1;
+		for (auto& entry : generations) {
+			entry = generation;
+			generation = ThreeBitGeneration::evolve(generation);
+		}
+		return generations;
+	}();
+	static_assert(cycle == std::array<unsigned, 8>{ 1, 2, 3, 4, 5, 6, 7, 1 });
+
+	using OneBitGeneration = Id<2, 1>; // only generation 1
+	static_assert(OneBitGeneration::evolve(1) == 1);
+
+	using ThirtyTwoBitGeneration = Id<64, 32>; // fields not promoted to int
+	static_assert(ThirtyTwoBitGeneration::evolve(0xFFFFFFFEu) == 0xFFFFFFFFu);
+	static_assert(ThirtyTwoBitGeneration::evolve(0xFFFFFFFFu) == 1);
 }
 
 TEST(Slotmap, HandlesGenerationCycle) {

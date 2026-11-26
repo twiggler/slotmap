@@ -10,6 +10,7 @@
 #include <algorithm>
 #include <concepts>
 #include <cstddef>
+#include <deque>
 #include <iterator>
 #include <cstdint>
 #include <memory_resource>
@@ -99,8 +100,7 @@ TYPED_TEST(SlotmapTest, InsertDelete) {
 	expectEqualsModel(slotmap, model);
 }
 
-// Regression: decrementing a skipfield iterator over a run of free slots used to move the element and the
-// skipfield positions apart.
+// Decrementing across a run of free slots lands on the last live slot before the run.
 TYPED_TEST(SlotmapTest, DecrementSkipsFreeRun) {
 	using TSlotmap = TypeParam;
 	using T = typename TSlotmap::value_type;
@@ -121,47 +121,98 @@ TYPED_TEST(SlotmapTest, DecrementSkipsFreeRun) {
 	EXPECT_EQ(*it, makeValue<T>(1));
 }
 
-// Every sequence of alloc/free operations up to a fixed depth on a small slotmap, compared with the model
-// after each step. Frees alternate between by-id and by-reference to cover both paths.
-template<class TSlotmap>
-struct ExplorationState {
-	TSlotmap slotmap{ 4 };
-	Model<TSlotmap> model;
-	std::vector<typename TSlotmap::Id> stale;
-	int nextValue = 0;
+enum class FreeBy : std::uint8_t { Id, Reference };
+
+// One step of an exploration: a push, or freeing the element in `slot`.
+struct Operation {
+	enum class Kind : std::uint8_t { Push, Free };
+
+	Kind kind = Kind::Push;
+	std::size_t slot = 0;
+	FreeBy by = FreeBy::Id;
 };
 
-template<class TSlotmap>
-void explore(const ExplorationState<TSlotmap>& state, int depth) {
-	using T = typename TSlotmap::value_type;
-	expectEqualsModel(state.slotmap, state.model);
-	for (auto id : state.stale)
-		EXPECT_EQ(state.slotmap.find(id), nullptr);
-	if (::testing::Test::HasFailure() || depth == 0)
-		return;
-
-	if (state.model.size() < state.slotmap.capacity()) {
-		auto next = state;
-		auto value = makeValue<T>(next.nextValue++);
-		auto id = next.slotmap.push(value);
-		next.model[id.index] = { id, value };
-		explore(next, depth - 1);
+std::string describe(const std::vector<Operation>& history) {
+	if (history.empty())
+		return "no operations";
+	std::string text;
+	for (const auto& operation : history) {
+		if (!text.empty())
+			text += ", ";
+		if (operation.kind == Operation::Kind::Push)
+			text += "push";
+		else
+			text += "free slot " + std::to_string(operation.slot) + (operation.by == FreeBy::Id ? " by id" : " by reference");
 	}
-
-	for (const auto& [index, entry] : state.model) {
-		auto next = state;
-		auto id = entry.first;
-		bool freed = index % 2 == 0 ? next.slotmap.free(id) : next.slotmap.free(*next.slotmap.find(id));
-		EXPECT_TRUE(freed);
-		EXPECT_FALSE(next.slotmap.free(id));
-		next.model.erase(index);
-		next.stale.push_back(id);
-		explore(next, depth - 1);
-	}
+	return text;
 }
 
+// A 4-slot slotmap together with the model it should match, the ids it has freed, and the operations that led
+// here. The operations only change state; checking happens separately, in expectMatchesModel.
+template<class TSlotmap>
+struct ModeledSlotmap {
+	void push() {
+		// The number of earlier operations makes every pushed value in one history distinct.
+		auto value = makeValue<typename TSlotmap::value_type>(static_cast<int>(history.size()));
+		auto id = slotmap.push(value);
+		model[id.index] = { id, value };
+		history.push_back({ .kind = Operation::Kind::Push });
+	}
+
+	void free(std::size_t slot, FreeBy by) {
+		auto id = model.at(slot).first;
+		if (by == FreeBy::Id)
+			slotmap.free(id);
+		else
+			slotmap.free(*slotmap.find(id));
+		model.erase(slot);
+		freedIds.push_back(id);
+		history.push_back({ .kind = Operation::Kind::Free, .slot = slot, .by = by });
+	}
+
+	// Every state one operation away: a push if there is room, and freeing each live slot, by id and by reference.
+	std::vector<ModeledSlotmap> successors() const {
+		std::vector<ModeledSlotmap> next;
+		if (model.size() < slotmap.capacity())
+			next.emplace_back(*this).push();
+		for (auto slot : model | std::views::keys)
+			for (auto by : { FreeBy::Id, FreeBy::Reference })
+				next.emplace_back(*this).free(slot, by);
+		return next;
+	}
+
+	TSlotmap slotmap{ 4 };
+	Model<TSlotmap> model;
+	std::vector<typename TSlotmap::Id> freedIds;
+	std::vector<Operation> history;
+};
+
+// The slotmap holds exactly the model's elements, and no freed id finds anything. A free that fails shows up here
+// too, because the model has already dropped the element.
+template<class TSlotmap>
+void expectMatchesModel(const ModeledSlotmap<TSlotmap>& state) {
+	expectEqualsModel(state.slotmap, state.model);
+	for (auto id : state.freedIds)
+		EXPECT_EQ(state.slotmap.find(id), nullptr) << "a freed id still finds an element";
+}
+
+// Every sequence of up to 9 operations on a 4-slot slotmap, checked against the model after each operation.
+// Breadth-first, so the first failure reported comes from a shortest failing sequence.
 TYPED_TEST(SlotmapTest, ExhaustiveOperationSequences) {
-	explore(ExplorationState<TypeParam>{}, 10);
+	constexpr std::size_t maxOperations = 9;
+	std::deque<ModeledSlotmap<TypeParam>> pending(1);
+	while (!pending.empty()) {
+		const auto state = std::move(pending.front());
+		pending.pop_front();
+
+		expectMatchesModel(state);
+		if (::testing::Test::HasFailure())
+			FAIL() << "the failures above occurred after: " << describe(state.history);
+
+		if (state.history.size() < maxOperations)
+			for (auto& next : state.successors())
+				pending.push_back(std::move(next));
+	}
 }
 
 TYPED_TEST(SlotmapTest, RandomOperationSequences) {

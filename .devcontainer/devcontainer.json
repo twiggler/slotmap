@@ -17,8 +17,8 @@
 	],
 
 	// Same absolute path as on the host: Claude Code keys sessions and memory by working directory.
-	// relabel=shared (podman) gives the workspace SELinux's shared container label, so SELinux keeps confining the
-	// container instead of being disabled for it.
+	// relabel=shared (podman) gives the workspace SELinux's shared container label. VS Code itself still runs the
+	// container with SELinux disabled; see README.md in this folder.
 	"workspaceMount": "source=${localWorkspaceFolder},target=${localWorkspaceFolder},type=bind,relabel=shared",
 	"workspaceFolder": "${localWorkspaceFolder}",
 

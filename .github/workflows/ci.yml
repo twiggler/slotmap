@@ -1,0 +1,131 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Newest GCC and Clang, sanitizers and clang-tidy, in the dev container's toolchain stage
+  # (the same compilers as local development, without the Claude Code CLI).
+  dev-container:
+    name: ${{ matrix.preset }} (dev container)
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        preset: [gcc, clang-libcxx, asan, tidy]
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - uses: docker/setup-buildx-action@v4.4.1
+      - name: Build dev container image
+        uses: docker/build-push-action@v7.4.0
+        with:
+          context: .devcontainer
+          target: toolchain
+          tags: slotmap-dev
+          load: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: cmake --workflow --preset ${{ matrix.preset }}
+        run: docker run --rm --user root -v "$PWD":"$PWD" -w "$PWD" slotmap-dev cmake --workflow --preset ${{ matrix.preset }}
+
+  format:
+    name: clang-format (dev container)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - uses: docker/setup-buildx-action@v4.4.1
+      - name: Build dev container image
+        uses: docker/build-push-action@v7.4.0
+        with:
+          context: .devcontainer
+          target: toolchain
+          tags: slotmap-dev
+          load: true
+          cache-from: type=gha
+      - name: Check formatting
+        run: docker run --rm --user root -v "$PWD":"$PWD" -w "$PWD" slotmap-dev clang-format --dry-run --Werror $(git ls-files '*.hpp' '*.cpp' '*.h')
+
+  # Oldest compilers that support the C++23 features the library uses.
+  oldest-supported:
+    name: ${{ matrix.name }}
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: GCC 14
+            preset: gcc
+            compiler: g++-14
+          - name: Clang 18 (libstdc++)
+            preset: clang
+            compiler: clang++-18
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - run: sudo apt-get update && sudo apt-get install -y ninja-build
+      - run: cmake --preset ${{ matrix.preset }} -DCMAKE_CXX_COMPILER=${{ matrix.compiler }}
+      - run: cmake --build --preset ${{ matrix.preset }}-debug && ctest --preset ${{ matrix.preset }}-debug
+      - run: cmake --build --preset ${{ matrix.preset }}-release && ctest --preset ${{ matrix.preset }}-release
+
+  macos:
+    name: Apple Clang
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - run: brew install ninja
+      - run: clang++ --version
+      - run: cmake --workflow --preset clang
+
+  windows:
+    name: MSVC
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ilammy/msvc-dev-cmd@v1.13.0
+      - run: cmake --workflow --preset msvc
+
+  # Security linter for the workflows and the Dependabot configuration. The zizmor version comes with the action,
+  # so Dependabot updates both.
+  zizmor:
+    name: zizmor
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - uses: zizmorcore/zizmor-action@v0.8.1
+        with:
+          advanced-security: false
+
+  # Fails when .github/workflows/actions.lock is out of sync with the workflows, or a locked commit no longer
+  # verifies upstream. After changing any `uses:`, run `gh actions-lock` locally and commit the lockfile.
+  lockfile:
+    name: Actions lockfile
+    runs-on: ubuntu-24.04
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - run: gh extension install github/gh-actions-lock --pin v0.5.1
+      - run: gh actions-lock --verify

@@ -1,0 +1,389 @@
+{
+	"version": 6,
+	"cmakeMinimumRequired": {
+		"major": 3,
+		"minor": 25,
+		"patch": 0
+	},
+	"configurePresets": [
+		{
+			"name": "base",
+			"hidden": true,
+			"generator": "Ninja Multi-Config",
+			"binaryDir": "${sourceDir}/build/${presetName}",
+			"cacheVariables": {
+				"CMAKE_CONFIGURATION_TYPES": "Debug;Release",
+				"CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+			}
+		},
+		{
+			"name": "gcc",
+			"inherits": "base",
+			"displayName": "GCC",
+			"cacheVariables": {
+				"CMAKE_CXX_COMPILER": "g++"
+			}
+		},
+		{
+			"name": "clang",
+			"inherits": "base",
+			"displayName": "Clang (libstdc++)",
+			"cacheVariables": {
+				"CMAKE_CXX_COMPILER": "clang++"
+			}
+		},
+		{
+			"name": "clang-libcxx",
+			"inherits": "base",
+			"displayName": "Clang (libc++)",
+			"cacheVariables": {
+				"CMAKE_CXX_COMPILER": "clang++",
+				"CMAKE_CXX_FLAGS": "-stdlib=libc++"
+			}
+		},
+		{
+			"name": "msvc",
+			"inherits": "base",
+			"displayName": "MSVC",
+			"cacheVariables": {
+				"CMAKE_CXX_COMPILER": "cl"
+			},
+			"architecture": {
+				"value": "x64",
+				"strategy": "external"
+			},
+			"condition": {
+				"type": "equals",
+				"lhs": "${hostSystemName}",
+				"rhs": "Windows"
+			}
+		},
+		{
+			"name": "asan",
+			"inherits": "base",
+			"displayName": "Clang + AddressSanitizer/UndefinedBehaviorSanitizer",
+			"cacheVariables": {
+				"CMAKE_CXX_COMPILER": "clang++",
+				"CMAKE_CXX_FLAGS": "-fsanitize=address,undefined -fno-sanitize-recover=all -fno-omit-frame-pointer"
+			}
+		},
+		{
+			"name": "tidy",
+			"inherits": "base",
+			"displayName": "Clang + clang-tidy",
+			"cacheVariables": {
+				"CMAKE_CXX_COMPILER": "clang++",
+				"SLOTMAP_CLANG_TIDY": "ON"
+			}
+		}
+	],
+	"buildPresets": [
+		{
+			"name": "gcc-debug",
+			"configurePreset": "gcc",
+			"configuration": "Debug"
+		},
+		{
+			"name": "gcc-release",
+			"configurePreset": "gcc",
+			"configuration": "Release"
+		},
+		{
+			"name": "clang-debug",
+			"configurePreset": "clang",
+			"configuration": "Debug"
+		},
+		{
+			"name": "clang-release",
+			"configurePreset": "clang",
+			"configuration": "Release"
+		},
+		{
+			"name": "clang-libcxx-debug",
+			"configurePreset": "clang-libcxx",
+			"configuration": "Debug"
+		},
+		{
+			"name": "clang-libcxx-release",
+			"configurePreset": "clang-libcxx",
+			"configuration": "Release"
+		},
+		{
+			"name": "msvc-debug",
+			"configurePreset": "msvc",
+			"configuration": "Debug"
+		},
+		{
+			"name": "msvc-release",
+			"configurePreset": "msvc",
+			"configuration": "Release"
+		},
+		{
+			"name": "asan-debug",
+			"configurePreset": "asan",
+			"configuration": "Debug"
+		},
+		{
+			"name": "asan-release",
+			"configurePreset": "asan",
+			"configuration": "Release"
+		},
+		{
+			"name": "tidy-debug",
+			"configurePreset": "tidy",
+			"configuration": "Debug"
+		}
+	],
+	"testPresets": [
+		{
+			"name": "gcc-debug",
+			"configurePreset": "gcc",
+			"configuration": "Debug",
+			"output": {
+				"outputOnFailure": true
+			},
+			"execution": {
+				"noTestsAction": "error"
+			}
+		},
+		{
+			"name": "gcc-release",
+			"configurePreset": "gcc",
+			"configuration": "Release",
+			"output": {
+				"outputOnFailure": true
+			},
+			"execution": {
+				"noTestsAction": "error"
+			}
+		},
+		{
+			"name": "clang-debug",
+			"configurePreset": "clang",
+			"configuration": "Debug",
+			"output": {
+				"outputOnFailure": true
+			},
+			"execution": {
+				"noTestsAction": "error"
+			}
+		},
+		{
+			"name": "clang-release",
+			"configurePreset": "clang",
+			"configuration": "Release",
+			"output": {
+				"outputOnFailure": true
+			},
+			"execution": {
+				"noTestsAction": "error"
+			}
+		},
+		{
+			"name": "clang-libcxx-debug",
+			"configurePreset": "clang-libcxx",
+			"configuration": "Debug",
+			"output": {
+				"outputOnFailure": true
+			},
+			"execution": {
+				"noTestsAction": "error"
+			}
+		},
+		{
+			"name": "clang-libcxx-release",
+			"configurePreset": "clang-libcxx",
+			"configuration": "Release",
+			"output": {
+				"outputOnFailure": true
+			},
+			"execution": {
+				"noTestsAction": "error"
+			}
+		},
+		{
+			"name": "msvc-debug",
+			"configurePreset": "msvc",
+			"configuration": "Debug",
+			"output": {
+				"outputOnFailure": true
+			},
+			"execution": {
+				"noTestsAction": "error"
+			}
+		},
+		{
+			"name": "msvc-release",
+			"configurePreset": "msvc",
+			"configuration": "Release",
+			"output": {
+				"outputOnFailure": true
+			},
+			"execution": {
+				"noTestsAction": "error"
+			}
+		},
+		{
+			"name": "asan-debug",
+			"configurePreset": "asan",
+			"configuration": "Debug",
+			"output": {
+				"outputOnFailure": true
+			},
+			"execution": {
+				"noTestsAction": "error"
+			}
+		},
+		{
+			"name": "asan-release",
+			"configurePreset": "asan",
+			"configuration": "Release",
+			"output": {
+				"outputOnFailure": true
+			},
+			"execution": {
+				"noTestsAction": "error"
+			}
+		}
+	],
+	"workflowPresets": [
+		{
+			"name": "gcc",
+			"steps": [
+				{
+					"type": "configure",
+					"name": "gcc"
+				},
+				{
+					"type": "build",
+					"name": "gcc-debug"
+				},
+				{
+					"type": "test",
+					"name": "gcc-debug"
+				},
+				{
+					"type": "build",
+					"name": "gcc-release"
+				},
+				{
+					"type": "test",
+					"name": "gcc-release"
+				}
+			]
+		},
+		{
+			"name": "clang",
+			"steps": [
+				{
+					"type": "configure",
+					"name": "clang"
+				},
+				{
+					"type": "build",
+					"name": "clang-debug"
+				},
+				{
+					"type": "test",
+					"name": "clang-debug"
+				},
+				{
+					"type": "build",
+					"name": "clang-release"
+				},
+				{
+					"type": "test",
+					"name": "clang-release"
+				}
+			]
+		},
+		{
+			"name": "clang-libcxx",
+			"steps": [
+				{
+					"type": "configure",
+					"name": "clang-libcxx"
+				},
+				{
+					"type": "build",
+					"name": "clang-libcxx-debug"
+				},
+				{
+					"type": "test",
+					"name": "clang-libcxx-debug"
+				},
+				{
+					"type": "build",
+					"name": "clang-libcxx-release"
+				},
+				{
+					"type": "test",
+					"name": "clang-libcxx-release"
+				}
+			]
+		},
+		{
+			"name": "msvc",
+			"steps": [
+				{
+					"type": "configure",
+					"name": "msvc"
+				},
+				{
+					"type": "build",
+					"name": "msvc-debug"
+				},
+				{
+					"type": "test",
+					"name": "msvc-debug"
+				},
+				{
+					"type": "build",
+					"name": "msvc-release"
+				},
+				{
+					"type": "test",
+					"name": "msvc-release"
+				}
+			]
+		},
+		{
+			"name": "asan",
+			"steps": [
+				{
+					"type": "configure",
+					"name": "asan"
+				},
+				{
+					"type": "build",
+					"name": "asan-debug"
+				},
+				{
+					"type": "test",
+					"name": "asan-debug"
+				},
+				{
+					"type": "build",
+					"name": "asan-release"
+				},
+				{
+					"type": "test",
+					"name": "asan-release"
+				}
+			]
+		},
+		{
+			"name": "tidy",
+			"steps": [
+				{
+					"type": "configure",
+					"name": "tidy"
+				},
+				{
+					"type": "build",
+					"name": "tidy-debug"
+				}
+			]
+		}
+	]
+}

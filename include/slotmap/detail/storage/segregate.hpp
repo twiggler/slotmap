@@ -1,36 +1,12 @@
 #pragma once
 
-#include <boost/fusion/adapted/std_pair.hpp>
-#include <boost/iterator/zip_iterator.hpp>
-#include <boost/iterator/transform_iterator.hpp>
-#include <boost/iterator/filter_iterator.hpp>
-#include <memory>
+#include <algorithm>
+#include <cstddef>
 
 namespace Twig::Container::detail {
 
-template<class ValueIter, class IndexIter>
-auto makeFilterIter(ValueIter firstValue, ValueIter lastValue, IndexIter firstIndex, IndexIter lastIndex) {
-	// Convert to function - pointer because lambda cannot be default - constructed.
-	using V = std::pair<typename std::iterator_traits<ValueIter>::reference, typename std::iterator_traits<IndexIter>::reference>;
-	
-	return boost::make_transform_iterator(
-		boost::make_filter_iterator(
-			+[](V zip) { return zip.second.valid(); },
-			boost::make_zip_iterator(std::make_pair(firstValue, firstIndex)),
-			boost::make_zip_iterator(std::make_pair(lastValue, lastIndex))
-		),
-		+[](V filteredZip) -> auto& { return filteredZip.first; }
-	);
-}
-
-template<class ValueIter, class IndexIter>
-auto makeFilterIter(ValueIter valueIter, IndexIter indexIter) {
-	return makeFilterIter(valueIter, valueIter, indexIter, indexIter);
-}
-
-template<template<class> class Vector,
-		 class T,
-		 class IdT>
+// Stores values and ids in parallel arrays (structure of arrays). Works for any T.
+template<template<class...> class Vector, class T, class IdT>
 class SegregateStorage {
 public:
 	using ValueVector = Vector<T>;
@@ -38,17 +14,12 @@ public:
 	using Index = typename IdT::UInt;
 	using Allocator = typename ValueVector::allocator_type;
 	using IndexAllocator = typename IndexVector::allocator_type;
-	using ValueIterator = typename ValueVector::iterator;
-	using ConstValueIterator = typename ValueVector::const_iterator;
-	using ConstIndexIterator = typename IndexVector::const_iterator;
-	using FilterIterator = decltype(makeFilterIter(std::declval<ValueIterator>(), std::declval<ConstIndexIterator>()));
-	using ConstFilterIterator = decltype(makeFilterIter(std::declval<ConstValueIterator>(), std::declval<ConstIndexIterator>()));
 
 	explicit SegregateStorage(Index capacity, const Allocator& allocator = {}) :
 		_values(capacity, allocator),
-		_indices(capacity, IndexAllocator{allocator}) {}
+		_indices(capacity, IndexAllocator{ allocator }) {}
 
-	IdT id(Index index) const {
+	IdT id(std::size_t index) const {
 		return _indices[index];
 	}
 
@@ -60,16 +31,12 @@ public:
 		_indices[id.index] = id;
 	}
 
-	void setId(Index index, IdT id) {
+	void setId(std::size_t index, IdT id) {
 		_indices[index] = id;
 	}
 
-	T& value(Index index) {
-		return _values[index];
-	}
-
-	const T& value(Index index) const {
-		return _values[index];
+	auto& value(this auto& self, std::size_t index) {
+		return self._values[index];
 	}
 
 	Index grow() {
@@ -80,35 +47,9 @@ public:
 		return capacity;
 	}
 
-	ValueIterator begin() {
-		return _values.begin();
-	}
-
-	ConstValueIterator begin() const {
-		return _values.begin();
-	}
-
-	FilterIterator beginFilter(Index top) {
-		return makeFilterIter(_values.begin(), std::next(_values.begin(), top), 
-							   _indices.begin(), std::next(_indices.begin(), top));
-	}
-
-	FilterIterator endFilter(Index top) {
-		return makeFilterIter(std::next(_values.begin(), top), std::next(_indices.begin(), top));
-	}
-
-	ConstFilterIterator beginFilter(Index top) const {
-		return makeFilterIter(_values.begin(), std::next(_values.begin(), top),
-							   _indices.begin(), std::next(_indices.begin(), top));
-	}
-
-	ConstFilterIterator endFilter(Index top) const {
-		return makeFilterIter(std::next(_values.begin(), top), std::next(_indices.begin(), top));
-	}
-
 private:
 	ValueVector _values;
 	IndexVector _indices;
 };
 
-}
+} // namespace Twig::Container::detail
